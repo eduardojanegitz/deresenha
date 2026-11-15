@@ -8,7 +8,7 @@ import { useGameContent, useThemeIds } from "@/content/useGameContent";
 import type { RankingChallenge } from "@/content/types";
 import type { Player } from "@/engine/core";
 import { createRanking, currentItem, DEFAULT_RANKING_CONFIG, reduceRanking, type RankingAction, type RankingConfig, type RankingState } from "@/engine/ranking";
-import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
 import { IconLock, IconShare } from "@/ui/Icons";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import { ChipGroup, ErrorNote, PhaseStage, Progress, Stepper, useEngine } from "@/ui/play";
@@ -48,7 +48,7 @@ export function RankingGame() {
 
 const MEDAL = ["var(--color-gema)", "var(--color-ceu)", "var(--color-chiclete)", "var(--color-lilas)", "var(--color-menta)", "var(--color-gema-t)", "var(--color-ceu-t)"];
 
-function RankingMatch({ config, players, pool, onRematch, onSetup }: { config: RankingConfig; players: Player[]; pool: RankingChallenge[]; onRematch: () => void; onSetup: () => void }) {
+export function RankingMatch({ config, players, pool, onRematch, onSetup, night }: { config: RankingConfig; players: Player[]; pool: RankingChallenge[]; onRematch: () => void; onSetup: () => void; night?: NightLink }) {
   const { state: s, dispatch, error } = useEngine<RankingState, RankingAction>(() => createRanking(config, players, pool, Math.random), (st, a, rng) => reduceRanking(st, a, pool, rng));
   const { play } = useSound();
   const reduce = useReducedMotion();
@@ -90,7 +90,7 @@ function RankingMatch({ config, players, pool, onRematch, onSetup }: { config: R
             );
           })}
         </ul>
-        <EndActions onRematch={onRematch} onSetup={onSetup} />
+        <EndActions onRematch={onRematch} onSetup={onSetup} night={night} result={{ game: "ranking", gameName: "Ranking às Cegas", scored: false, players: s.players.map((p) => ({ id: p.id, name: p.name, score: 0 })) }} />
       </>
     );
   } else {

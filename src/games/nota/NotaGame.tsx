@@ -18,7 +18,7 @@ import {
   type NotaConfig,
   type NotaState,
 } from "@/engine/nota";
-import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import {
   ChipGroup,
@@ -176,7 +176,7 @@ export function NotaGame() {
 
 /* ---------- partida ---------- */
 
-function NotaMatch({ config, players, pool, onRematch, onSetup }: { config: NotaConfig; players: Player[]; pool: NotaChallenge[]; onRematch: () => void; onSetup: () => void }) {
+export function NotaMatch({ config, players, pool, onRematch, onSetup, night }: { config: NotaConfig; players: Player[]; pool: NotaChallenge[]; onRematch: () => void; onSetup: () => void; night?: NightLink }) {
   const { state: s, dispatch, error } = useEngine<NotaState, NotaAction>(
     () => createNota(config, players, pool, Math.random),
     (st, a, rng) => reduceNota(st, a, pool, rng),
@@ -288,7 +288,7 @@ function NotaMatch({ config, players, pool, onRematch, onSetup }: { config: Nota
       break;
 
     case "end":
-      body = <EndPhase s={s} onRematch={onRematch} onSetup={onSetup} />;
+      body = <EndPhase s={s} onRematch={onRematch} onSetup={onSetup} night={night} />;
       break;
   }
 
@@ -483,8 +483,16 @@ function Stat({ k, v, wide = false }: { k: string; v: string; wide?: boolean }) 
   );
 }
 
-export function EndPhase({ s, onRematch, onSetup, actions }: { s: NotaState; onRematch?: () => void; onSetup?: () => void; actions?: React.ReactNode }) {
-  const footer = actions ?? <EndActions onRematch={onRematch ?? (() => {})} onSetup={onSetup ?? (() => {})} />;
+export function EndPhase({ s, onRematch, onSetup, actions, night }: { s: NotaState; onRematch?: () => void; onSetup?: () => void; actions?: React.ReactNode; night?: NightLink }) {
+  const scoredMatch = s.config.mode === "secreta" || s.config.scoreAvaliacao;
+  const footer = actions ?? (
+    <EndActions
+      onRematch={onRematch ?? (() => {})}
+      onSetup={onSetup ?? (() => {})}
+      night={night}
+      result={{ game: "nota", gameName: s.config.mode === "secreta" ? "Nota Secreta" : "Avaliação", scored: scoredMatch, unit: "pts", players: s.players.map((p) => ({ id: p.id, name: p.name, score: s.scores[p.id] ?? 0 })) }}
+    />
+  );
   const scored = s.config.mode === "secreta" || s.config.scoreAvaliacao;
   if (scored) {
     const entries = s.players.map((p) => ({ id: p.id, name: p.name, piece: p.piece, score: s.scores[p.id] ?? 0 }));

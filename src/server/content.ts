@@ -41,6 +41,8 @@ export function rowToChallenge(r: Row): Challenge | null {
       return { ...base, game: "infiltrado", major: String(d.major ?? ""), impostor: String(d.impostor ?? "") };
     case "ranking":
       return Array.isArray(d.items) ? { ...base, game: "ranking", title: String(d.title ?? ""), items: d.items.map(String) } : null;
+    case "voce-prefere":
+      return { ...base, game: "voce-prefere", a: String(d.a ?? ""), b: String(d.b ?? "") };
     default:
       return null;
   }

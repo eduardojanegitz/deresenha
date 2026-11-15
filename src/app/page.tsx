@@ -38,6 +38,21 @@ export default function Home() {
             </Link>
           </div>
         </article>
+        <nav className="grid gap-2.5" aria-label="Mais">
+          {[
+            { href: "/noite", title: "Noite de Jogos", text: "Vários jogos seguidos, um campeão no fim.", piece: "capsula" as const },
+            { href: "/temas", title: "Meus temas", text: "Desafios com as histórias da sua turma.", piece: "bolota" as const },
+            { href: "/historico", title: "Histórico", text: "Partidas e quem mais ganhou neste aparelho.", piece: "meialua" as const },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className="card flex items-center gap-3 rounded-[20px] px-4 py-3 transition-transform active:translate-y-1">
+              <Piece kind={l.piece} size={40} />
+              <span>
+                <b className="font-display block text-lg font-extrabold">{l.title}</b>
+                <span className="text-sm text-[var(--fg-2)]">{l.text}</span>
+              </span>
+            </Link>
+          ))}
+        </nav>
       </section>
     </div>
   );

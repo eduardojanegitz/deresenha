@@ -8,7 +8,7 @@ import { useGameContent, useThemeIds } from "@/content/useGameContent";
 import type { Difficulty, MimicaChallenge } from "@/content/types";
 import type { Player } from "@/engine/core";
 import { createMimica, currentActor, currentTeam, DEFAULT_MIMICA_CONFIG, reduceMimica, totalTurns, type MimicaAction, type MimicaConfig, type MimicaState } from "@/engine/mimica";
-import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import { ChipGroup, ErrorNote, PassPhone, PhaseStage, Podium, Progress, Scoreboard, Stepper, Timer, useEngine, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
@@ -77,7 +77,7 @@ export function MimicaGame() {
   );
 }
 
-function MimicaMatch({ config, players, pool, onRematch, onSetup }: { config: MimicaConfig; players: Player[]; pool: MimicaChallenge[]; onRematch: () => void; onSetup: () => void }) {
+export function MimicaMatch({ config, players, pool, onRematch, onSetup, night }: { config: MimicaConfig; players: Player[]; pool: MimicaChallenge[]; onRematch: () => void; onSetup: () => void; night?: NightLink }) {
   const { state: s, dispatch, error } = useEngine<MimicaState, MimicaAction>(() => createMimica(config, players, pool, Math.random), (st, a, rng) => reduceMimica(st, a, pool, rng));
   const [peek, setPeek] = useState(false);
   const { play } = useSound();
@@ -191,7 +191,19 @@ function MimicaMatch({ config, players, pool, onRematch, onSetup }: { config: Mi
       <>
         <h1 className="text-center">{top.score === 0 ? "Ninguém acertou. Revanche?" : sorted[1]?.score === top.score ? "Empate!" : `${top.name} venceu!`}</h1>
         <Podium entries={entries} unit={entries.some((e) => e.score !== 1) ? "acertos" : "acerto"} />
-        <EndActions onRematch={onRematch} onSetup={onSetup} />
+        <EndActions
+          onRematch={onRematch}
+          onSetup={onSetup}
+          night={night}
+          result={{
+            game: "mimica",
+            gameName: "Mímica",
+            scored: true,
+            unit: "acertos",
+            // Cada um por si: os pontos do "time" são da própria pessoa (necessário para a Noite de Jogos).
+            players: individual ? s.teams.map((t) => ({ id: t.playerIds[0]!, name: t.name, score: s.teamScores[t.id] ?? 0 })) : s.teams.map((t) => ({ id: t.id, name: t.name, score: s.teamScores[t.id] ?? 0 })),
+          }}
+        />
       </>
     );
   }

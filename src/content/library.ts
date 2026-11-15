@@ -4,6 +4,7 @@ import type {
   InfiltradoChallenge,
   MimicaChallenge,
   NotaChallenge,
+  PrefereChallenge,
   RankingChallenge,
   Theme,
 } from "./types";
@@ -51,6 +52,10 @@ function infiltrado(theme: string, pairs: [string, string][], difficulty: Diffic
 }
 function ranking(theme: string, list: [string, string[]][]): RankingChallenge[] {
   return list.map(([title, items], i) => ({ ...base, id: `ranking-${theme}-${i + 1}`, game: "ranking", theme, title, items, difficulty: "medio" }));
+}
+
+function prefere(theme: string, pairs: [string, string][]): PrefereChallenge[] {
+  return pairs.map(([a, b], i) => ({ ...base, id: `prefere-${theme}-${i + 1}`, game: "voce-prefere", theme, a, b, difficulty: "medio" }));
 }
 
 /* ---------- Jogo da Nota: Nota Secreta (categorias abertas) ---------- */
@@ -243,7 +248,50 @@ const RANKING = [
   ]),
 ];
 
-export const CHALLENGES: Challenge[] = [...NOTA_SECRETA, ...NOTA_AVALIACAO, ...MIMICA, ...INFILTRADO, ...RANKING];
+/* ---------- Você Prefere? ---------- */
+const PREFERE = [
+  ...prefere("comida", [
+    ["Comer só pizza pelo resto da vida", "Nunca mais comer pizza"],
+    ["Café sempre frio", "Refrigerante sempre sem gás"],
+    ["Só comer doce", "Só comer salgado"],
+    ["Jantar num restaurante chique sozinho", "Comer cachorro-quente de rua com a turma"],
+  ]),
+  ...prefere("cotidiano", [
+    ["Acordar todo dia às 5h", "Dormir todo dia às 3h"],
+    ["Ficar uma semana sem celular", "Ficar uma semana sem banho quente"],
+    ["Pegar trânsito todo dia", "Trabalhar no sábado"],
+    ["Ter o Wi-Fi mais rápido do mundo", "Nunca mais pegar fila"],
+  ]),
+  ...prefere("amizade", [
+    ["Pagar a conta de todo mundo no rolê", "Lavar a louça de todo mundo depois"],
+    ["Saber o que os amigos falam de você", "Nunca saber"],
+    ["Ser o amigo que sempre se atrasa", "Ser o amigo que sempre espera"],
+    ["Ler todas as mensagens do grupo da família", "Responder todas as do grupo da firma"],
+  ]),
+  ...prefere("absurdo", [
+    ["Falar com animais", "Falar todos os idiomas"],
+    ["Ter um botão de pular", "Ter um botão de voltar"],
+    ["Ser invisível só quando ninguém olha", "Voar só a 10 centímetros do chão"],
+    ["Espirrar confete", "Soluçar bolhas de sabão"],
+    ["Ter uma música tocando sempre que você entra num lugar", "Ter risadas de plateia depois de tudo que você fala"],
+  ]),
+  ...prefere("relacionamentos", [
+    ["Primeiro encontro no cinema", "Primeiro encontro no karaokê"],
+    ["Saber tudo sobre o passado da pessoa", "Saber nada"],
+    ["Mensagem de bom dia todo dia", "Ligação surpresa de vez em quando"],
+  ]),
+  ...prefere("lugares", [
+    ["Férias na praia com chuva", "Férias na montanha com sol"],
+    ["Morar na cidade grande", "Morar no interior"],
+    ["Conhecer todos os países", "Conhecer todo o Brasil"],
+  ]),
+  ...prefere("musica", [
+    ["Só ouvir uma música para sempre", "Nunca repetir uma música"],
+    ["Cantar mal e muito alto", "Cantar bem e muito baixo"],
+  ]),
+];
+
+export const CHALLENGES: Challenge[] = [...NOTA_SECRETA, ...NOTA_AVALIACAO, ...MIMICA, ...INFILTRADO, ...RANKING, ...PREFERE];
 
 /** Desafios publicados de um jogo, opcionalmente filtrados por tema. */
 export function challengesFor<G extends Challenge["game"]>(game: G, themes?: readonly string[]) {

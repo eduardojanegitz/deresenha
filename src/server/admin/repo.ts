@@ -5,9 +5,9 @@ import { db } from "@/server/db";
 
 /** Acesso ao banco usado só pelo painel. Toda escrita passa por validação com zod. */
 
-export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking"] as const;
+export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking", "voce-prefere"] as const;
 export type AdminGame = (typeof ADMIN_GAMES)[number];
-export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas" };
+export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?" };
 export const STATUS_LABEL: Record<PublishStatus, string> = { published: "Publicado", draft: "Rascunho", archived: "Arquivado" };
 export const DIFF_LABEL: Record<Difficulty, string> = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
 
@@ -90,6 +90,8 @@ export const challengeSchema = z
     impostor: z.string().optional(),
     title: z.string().optional(),
     items: z.string().optional(),
+    a: z.string().optional(),
+    b: z.string().optional(),
   })
   .transform((v, ctx) => {
     const issue = (message: string) => {
@@ -132,6 +134,15 @@ export const challengeSchema = z
         if (items.some((i) => i.length > 40)) return issue("Cada item pode ter até 40 caracteres.");
         if (new Set(items.map((i) => i.toLowerCase())).size !== items.length) return issue("Há itens repetidos.");
         data = { title: t.data, items };
+        break;
+      }
+      case "voce-prefere": {
+        const a = text(2, 100, "Opção A").safeParse(v.a ?? "");
+        const b = text(2, 100, "Opção B").safeParse(v.b ?? "");
+        if (!a.success) return issue(a.error.issues[0]!.message);
+        if (!b.success) return issue(b.error.issues[0]!.message);
+        if (a.data.toLowerCase() === b.data.toLowerCase()) return issue("As duas opções precisam ser diferentes.");
+        data = { a: a.data, b: b.data };
         break;
       }
     }

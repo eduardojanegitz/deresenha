@@ -50,4 +50,11 @@ export interface RankingChallenge extends BaseChallenge {
   items: string[];
 }
 
-export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge;
+/** Você Prefere?: duas alternativas. */
+export interface PrefereChallenge extends BaseChallenge {
+  game: "voce-prefere";
+  a: string;
+  b: string;
+}
+
+export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge | PrefereChallenge;

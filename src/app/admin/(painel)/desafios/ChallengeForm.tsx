@@ -10,6 +10,7 @@ const GAMES = [
   ["mimica", "Mímica"],
   ["infiltrado", "Infiltrado"],
   ["ranking", "Ranking às Cegas"],
+  ["voce-prefere", "Você Prefere?"],
 ] as const;
 
 type Game = (typeof GAMES)[number][0];
@@ -99,6 +100,19 @@ export function ChallengeForm({ initial, themes, defaultGame }: { initial: Chall
             <span className="muted text-[13px]">A cada rodada sorteamos 5 itens desta lista.</span>
           </label>
         </>
+      )}
+
+      {game === "voce-prefere" && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className={field}>
+            <span className="label">Opção A</span>
+            <input name="a" className="input" defaultValue={String(d.a ?? "")} maxLength={100} placeholder="Falar com animais" required />
+          </label>
+          <label className={field}>
+            <span className="label">Opção B</span>
+            <input name="b" className="input" defaultValue={String(d.b ?? "")} maxLength={100} placeholder="Falar todos os idiomas" required />
+          </label>
+        </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-3">

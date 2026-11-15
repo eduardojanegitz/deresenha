@@ -6,6 +6,7 @@ import { setStatusAction } from "../../actions";
 function summary(c: Pick<ChallengeRow, "game" | "data">) {
   const d = c.data;
   if (c.game === "infiltrado") return `${d.major} × ${d.impostor}`;
+  if (c.game === "voce-prefere") return `${d.a} ou ${d.b}`;
   if (c.game === "ranking") return `${d.title} (${(d.items as string[]).length} itens)`;
   return String(d.text ?? "");
 }

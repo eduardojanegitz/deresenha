@@ -18,7 +18,7 @@ import {
   type InfiltradoConfig,
   type InfiltradoState,
 } from "@/engine/infiltrado";
-import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import { ChipGroup, ErrorNote, HoldToReveal, PassPhone, PhaseStage, Podium, Progress, Scoreboard, Stepper, useEngine, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
@@ -55,7 +55,7 @@ export function InfiltradoGame() {
   );
 }
 
-function InfiltradoMatch({ config, players, pool, onRematch, onSetup }: { config: InfiltradoConfig; players: Player[]; pool: InfiltradoChallenge[]; onRematch: () => void; onSetup: () => void }) {
+export function InfiltradoMatch({ config, players, pool, onRematch, onSetup, night }: { config: InfiltradoConfig; players: Player[]; pool: InfiltradoChallenge[]; onRematch: () => void; onSetup: () => void; night?: NightLink }) {
   const { state: s, dispatch, error } = useEngine<InfiltradoState, InfiltradoAction>(() => createInfiltrado(config, players, pool, Math.random), (st, a, rng) => reduceInfiltrado(st, a, pool, rng));
   const [privateOpen, setPrivateOpen] = useState(false);
   const [peeked, setPeeked] = useState(false);
@@ -226,7 +226,7 @@ function InfiltradoMatch({ config, players, pool, onRematch, onSetup }: { config
         <h1 className="text-center">{sorted[0]!.score === 0 ? "Ninguém pontuou" : sorted[1]?.score === sorted[0]!.score ? "Empate no topo!" : `${sorted[0]!.name} levou!`}</h1>
         <Podium entries={entries} />
         {sorted.length > 3 && <Scoreboard players={s.players.filter((p) => sorted.slice(3).some((x) => x.id === p.id))} scores={s.scores} />}
-        <EndActions onRematch={onRematch} onSetup={onSetup} />
+        <EndActions onRematch={onRematch} onSetup={onSetup} night={night} result={{ game: "infiltrado", gameName: "Infiltrado", scored: true, unit: "pts", players: s.players.map((p) => ({ id: p.id, name: p.name, score: s.scores[p.id] ?? 0 })) }} />
       </>
     );
   }
