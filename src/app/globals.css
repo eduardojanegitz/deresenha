@@ -151,6 +151,11 @@
     --cd: var(--color-menta-d);
     --t: var(--color-tinta);
   }
+  .btn-ceu {
+    --c: var(--color-ceu);
+    --cd: var(--color-ceu-d);
+    --t: var(--color-tinta);
+  }
   .btn-small {
     min-height: 46px;
     font-size: 16px;

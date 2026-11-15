@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { playSignature, SignatureSVG } from "@/brand/Signature";
+import { useState } from "react";
+import { Signature } from "@/brand/Signature";
 
 export function SignatureReplay() {
-  const ref = useRef<SVGSVGElement>(null);
-  useEffect(() => {
-    if (ref.current) playSignature(ref.current);
-  }, []);
+  const [n, setN] = useState(0);
   return (
     <div className="card grid place-items-center gap-[18px] rounded-[28px] px-5 py-7">
-      <SignatureSVG ref={ref} className="block h-auto w-full max-w-[560px] text-[var(--color-tinta)]" />
-      <button className="btn btn-small" onClick={() => ref.current && playSignature(ref.current)}>
+      <Signature key={n} play="always" className="block h-auto w-full max-w-[560px]" />
+      <button className="btn btn-small" onClick={() => setN((v) => v + 1)}>
         Ver de novo
       </button>
     </div>

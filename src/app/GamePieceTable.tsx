@@ -1,13 +1,24 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { Piece, PIECES } from "@/brand/Piece";
 import { PIECE_KINDS, type PieceKind } from "@/engine/core";
 import { useSound } from "@/ui/sound";
 
-/** A mesa de feltro com as cinco peças. Tocar numa peça faz ela pular e falar. */
+let landedThisSession = false;
+
+/**
+ * A mesa de feltro com as cinco peças. Na primeira visita, elas pulam para a mesa logo
+ * depois da assinatura. Tocar numa peça faz ela pular e falar.
+ */
 export function GamePieceTable() {
+  const reduce = useReducedMotion();
+  const [enter] = useState(() => {
+    const first = !landedThisSession;
+    landedThisSession = true;
+    return first;
+  });
   const [said, setSaid] = useState<{ k: PieceKind; n: number } | null>(null);
   const [hopping, setHopping] = useState<PieceKind | null>(null);
   const { play } = useSound();
@@ -16,8 +27,12 @@ export function GamePieceTable() {
       <div className="relative mt-1.5">
         <div className="relative z-[1] flex items-end justify-around px-1.5">
           {PIECE_KINDS.map((k, i) => (
-            <button
+            <motion.button
               key={k}
+              initial={enter && !reduce ? { y: -90, opacity: 0, scaleY: 1.25 } : false}
+              animate={{ y: 0, opacity: 1, scaleY: 1 }}
+              transition={{ delay: 0.75 + i * 0.09, type: "spring", stiffness: 520, damping: 15, mass: 0.9, opacity: { duration: 0.15, delay: 0.75 + i * 0.09 } }}
+              style={{ transformOrigin: "50% 100%" }}
               aria-label={`${PIECES[k].name}: ${PIECES[k].role}`}
               className="rounded-2xl"
               onClick={() => {
@@ -27,8 +42,8 @@ export function GamePieceTable() {
                 play("tap");
               }}
             >
-              <Piece kind={k} size={62} alive blinkDelay={i * 1.3} className={hopping === k ? "hop" : ""} />
-            </button>
+              <Piece kind={k} size={68} alive blinkDelay={i * 1.3} className={hopping === k ? "hop" : ""} />
+            </motion.button>
           ))}
         </div>
         <div className="-mt-1.5 h-[22px] rounded-xl bg-[var(--color-feltro)] shadow-[0_5px_0_var(--color-feltro-d)]" />
@@ -45,6 +60,11 @@ export function GamePieceTable() {
               transition={{ type: "spring", stiffness: 500, damping: 22 }}
             >
               {PIECES[said.k].name}: {PIECES[said.k].line}
+            </motion.span>
+          )}
+          {!said && (
+            <motion.span key="hint" className="inline-block py-2.5 text-base font-semibold text-[var(--fg-2)]" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 1.5 } }} exit={{ opacity: 0, transition: { duration: 0.1 } }}>
+              Toque numa peça para ela falar.
             </motion.span>
           )}
         </AnimatePresence>
