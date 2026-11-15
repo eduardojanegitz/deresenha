@@ -10,6 +10,7 @@ import type {
   RankingChallenge,
   Theme,
 } from "./types";
+import { TURMA_MIMICA, TURMA_NOTA_AVALIACAO, TURMA_NOTA_SECRETA, TURMA_QUEM, TURMA_THEMES } from "./turma.ts";
 
 /**
  * Conteúdo inicial em português brasileiro. Escrito à mão, sem geração por IA a cada rodada.
@@ -18,6 +19,8 @@ import type {
  */
 
 export const THEMES: Theme[] = [
+  // Os temas da turma vêm primeiro: são os mais divertidos (ver ./turma.ts).
+  ...TURMA_THEMES,
   { id: "comida", label: "Comida" },
   { id: "filmes", label: "Filmes e séries" },
   { id: "futebol", label: "Futebol" },
@@ -369,7 +372,20 @@ const QUIZ = [
   ),
 ];
 
-export const CHALLENGES: Challenge[] = [...NOTA_SECRETA, ...NOTA_AVALIACAO, ...MIMICA, ...INFILTRADO, ...RANKING, ...PREFERE, ...QUEM, ...QUIZ];
+export const CHALLENGES: Challenge[] = [
+  ...TURMA_NOTA_SECRETA,
+  ...NOTA_SECRETA,
+  ...TURMA_NOTA_AVALIACAO,
+  ...NOTA_AVALIACAO,
+  ...TURMA_MIMICA,
+  ...MIMICA,
+  ...INFILTRADO,
+  ...RANKING,
+  ...PREFERE,
+  ...TURMA_QUEM,
+  ...QUEM,
+  ...QUIZ,
+];
 
 /** Desafios publicados de um jogo, opcionalmente filtrados por tema. */
 export function challengesFor<G extends Challenge["game"]>(game: G, themes?: readonly string[]) {

@@ -1,4 +1,5 @@
 import { CHALLENGES, THEMES } from "@/content/library";
+import { TURMA_THEMES } from "@/content/turma";
 import type { Challenge, Difficulty, GameId, PublishStatus, Theme } from "@/content/types";
 import { db } from "./db";
 
@@ -55,6 +56,12 @@ export function rowToChallenge(r: Row): Challenge | null {
   }
 }
 
+/** Temas da turma (os mais divertidos) no topo, na ordem em que foram pensados; o resto em ordem alfabética. */
+function featuredFirst(themes: Theme[]): Theme[] {
+  const rank = new Map(TURMA_THEMES.map((t, i) => [t.id, i]));
+  return [...themes].sort((a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999) || a.label.localeCompare(b.label, "pt-BR"));
+}
+
 const TTL_MS = 30_000;
 let cache: { at: number; bundle: ContentBundle } | null = null;
 
@@ -72,7 +79,7 @@ export async function loadContent(): Promise<ContentBundle> {
     ]);
     if (rows.length === 0) return fallback(); // banco vazio (sem seed): usa o embutido
     const bundle: ContentBundle = {
-      themes,
+      themes: featuredFirst(themes),
       challenges: rows.map(rowToChallenge).filter((c): c is Challenge => c !== null),
       settings: Object.fromEntries(settings.map((s) => [s.game, { enabled: s.enabled, defaultRounds: s.default_rounds }])),
       source: "db",
