@@ -10,7 +10,7 @@ import type { Player } from "@/engine/core";
 import { createMimica, currentActor, currentTeam, DEFAULT_MIMICA_CONFIG, reduceMimica, totalTurns, type MimicaAction, type MimicaConfig, type MimicaState } from "@/engine/mimica";
 import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
-import { ChipGroup, ErrorNote, PassPhone, PhaseStage, Podium, Progress, Scoreboard, Stepper, Timer, useEngine, useTone } from "@/ui/play";
+import { ChipGroup, ErrorNote, PassPhone, PhaseStage, Podium, RestOfPodium, Progress, Scoreboard, Stepper, Timer, useEngine, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
 
 const DIFF: { value: Difficulty; label: string }[] = [
@@ -191,6 +191,7 @@ export function MimicaMatch({ config, players, pool, onRematch, onSetup, night }
       <>
         <h1 className="text-center">{top.score === 0 ? "Ninguém acertou. Revanche?" : sorted[1]?.score === top.score ? "Empate!" : `${top.name} venceu!`}</h1>
         <Podium entries={entries} unit={entries.some((e) => e.score !== 1) ? "acertos" : "acerto"} />
+        <RestOfPodium entries={entries} />
         <EndActions
           onRematch={onRematch}
           onSetup={onSetup}

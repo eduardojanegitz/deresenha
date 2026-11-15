@@ -503,7 +503,7 @@ export function EndPhase({ s, onRematch, onSetup, actions, night }: { s: NotaSta
       <>
         <h1 className="text-center">{title}</h1>
         <Podium entries={entries} />
-        {sorted.length > 3 && <Scoreboard players={s.players} scores={s.scores} skip={3} />}
+        <Scoreboard players={s.players} scores={s.scores} afterPodium />
         {footer}
       </>
     );

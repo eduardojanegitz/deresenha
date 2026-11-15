@@ -10,7 +10,7 @@ import type { Player } from "@/engine/core";
 import { createQuem, DEFAULT_QUEM_CONFIG, QUEM_MIN, QUEM_QUESTION_OPTIONS, QUEM_SECONDS_OPTIONS, quemPoints, reduceQuem, type QuemAction, type QuemConfig, type QuemState } from "@/engine/quem";
 import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
-import { ChipGroup, ErrorNote, PhaseStage, Podium, Progress, Scoreboard, Stepper, Timer, useEngine, useTone } from "@/ui/play";
+import { ChipGroup, ErrorNote, PhaseStage, Podium, RestOfPodium, Progress, Scoreboard, Stepper, Timer, useEngine, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
 
 export function QuemGame() {
@@ -191,6 +191,7 @@ export function QuemMatch({ config, players, pool, onRematch, onSetup, night }: 
         <>
           <h1 className="text-center">{sorted[0]!.score === 0 ? "Ninguém acertou" : sorted[1]?.score === sorted[0]!.score ? "Empate no topo!" : `${sorted[0]!.name} levou!`}</h1>
           <Podium entries={entries} />
+          <RestOfPodium entries={entries} />
           <ul className="grid gap-2" aria-label="Quem era quem">
             {s.history.map((h, i) => (
               <li key={i} className="card flex items-center gap-3 rounded-[18px] px-3 py-2">

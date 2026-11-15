@@ -10,7 +10,7 @@ import type { Player } from "@/engine/core";
 import { createPrefere, DEFAULT_PREFERE_CONFIG, PREFERE_MIN, reducePrefere, tallyPrefere, type PrefereAction, type PrefereChoice, type PrefereConfig, type PrefereState } from "@/engine/prefere";
 import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
-import { ChipGroup, ErrorNote, PhaseStage, Podium, Progress, Stepper, Toggle, useEngine, useTone } from "@/ui/play";
+import { ChipGroup, ErrorNote, PhaseStage, Podium, RestOfPodium, Progress, Stepper, Toggle, useEngine, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
 
 export function PrefereGame() {
@@ -210,6 +210,7 @@ export function PrefereEnd({ s, actions }: { s: Pick<PrefereState, "players" | "
         <>
           <h1 className="text-center">{s.config.scoreMajority ? (sorted[0]!.score === 0 ? "Ninguém pontuou" : sorted[1]?.score === sorted[0]!.score ? "Empate no topo!" : `${sorted[0]!.name} levou!`) : "Quem pensa como a turma"}</h1>
           <Podium entries={entries} unit={s.config.scoreMajority ? "pts" : "com a maioria"} />
+          <RestOfPodium entries={entries} />
           {sorted.length > 1 && (
             <div className="card flex items-center gap-3.5 rounded-[20px] p-4">
               <Piece kind={P(contra.id).piece} mood="sus" size={52} alive />

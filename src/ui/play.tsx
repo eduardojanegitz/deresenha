@@ -337,16 +337,22 @@ export function PassPhone({ player, title, note, cta, onReady }: { player: Playe
 
 /* ---------- placar e pódio ---------- */
 
+/** Lugar de cada um com empate: quem tem a mesma pontuação divide a posição (1, 1, 3…). */
+function ranked<T extends { score: number }>(items: readonly T[]) {
+  const sorted = [...items].sort((a, b) => b.score - a.score);
+  return sorted.map((item) => ({ item, position: sorted.findIndex((x) => x.score === item.score) + 1 }));
+}
+
 /**
- * Placar com posição. `skip` esconde as primeiras linhas (quem já está no pódio), mas a
- * posição e a barra continuam contadas sobre a partida inteira: quem vem logo abaixo do
- * pódio aparece como 4º, e empatados dividem a mesma posição.
+ * Placar com posição e barra, contadas sobre a partida inteira. `afterPodium` mostra só
+ * quem ficou fora do pódio (do 4º lugar em diante); empatados dividem a mesma posição.
  */
-export function Scoreboard({ players, scores, unit = "", skip = 0 }: { players: Player[]; scores: Record<string, number>; unit?: string; skip?: number }) {
+export function Scoreboard({ players, scores, unit = "", afterPodium = false }: { players: Player[]; scores: Record<string, number>; unit?: string; afterPodium?: boolean }) {
   const all = standings(players, scores);
   const max = Math.max(1, ...all.map((r) => r.score));
-  const rows = all.slice(skip);
+  const rows = afterPodium ? all.filter((r) => r.position > 3) : all;
   const reduce = useReducedMotion();
+  if (rows.length === 0) return null;
   return (
     <ol className="grid gap-2.5">
       {rows.map((r, k) => (
@@ -374,45 +380,61 @@ export function Scoreboard({ players, scores, unit = "", skip = 0 }: { players: 
   );
 }
 
+/** Placar de quem ficou fora do pódio, a partir das mesmas entradas do pódio. */
+export function RestOfPodium({ entries, unit = "" }: { entries: { id: string; name: string; piece: Player["piece"]; score: number }[]; unit?: string }) {
+  return <Scoreboard players={entries.map(({ id, name, piece }) => ({ id, name, piece }))} scores={Object.fromEntries(entries.map((e) => [e.id, e.score]))} unit={unit} afterPodium />;
+}
+
+const joinNames = (names: string[]) => (names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`);
+
+/**
+ * Pódio por posição: cada degrau (1º, 2º, 3º) recebe todo mundo que está naquela posição.
+ * Empatados sobem juntos no mesmo degrau; uma posição pulada pelo empate (1, 1, 3) deixa
+ * o degrau vazio. Quem ficou do 4º em diante vai para o placar abaixo (`afterPodium`).
+ */
 export function Podium({ entries, unit = "pts" }: { entries: { id: string; name: string; piece: Player["piece"]; score: number }[]; unit?: string }) {
-  const sorted = [...entries].sort((a, b) => b.score - a.score);
   const reduce = useReducedMotion();
-  // Posição com empate: quem tem a mesma pontuação divide o lugar (como no placar).
-  const positionOf = (e: (typeof sorted)[number]) => sorted.findIndex((x) => x.score === e.score) + 1;
-  const order = [sorted[1], sorted[0], sorted[2]];
-  const H = [96, 132, 72];
-  const C = ["var(--color-ceu)", "var(--color-gema)", "var(--color-chiclete)"];
-  const place = [2, 1, 3];
+  const rows = ranked(entries);
+  const at = (pos: number) => rows.filter((r) => r.position === pos).map((r) => r.item);
+  // Ordem visual: 2º à esquerda, 1º no meio, 3º à direita.
+  const steps = [2, 1, 3].map((pos) => ({ pos, people: at(pos) }));
+  const H: Record<number, number> = { 1: 132, 2: 96, 3: 72 };
+  const C: Record<number, string> = { 1: "var(--color-gema)", 2: "var(--color-ceu)", 3: "var(--color-chiclete)" };
   return (
     <div className="grid grid-cols-3 items-end gap-2.5">
-      {order.map((p, k) =>
-        p ? (
-          <div key={p.id} className="grid justify-items-center gap-2 text-center">
+      {steps.map(({ pos, people }, k) => {
+        if (people.length === 0) return <div key={pos} />;
+        const many = people.length > 1;
+        const size = pos === 1 ? (many ? 46 : 72) : many ? 38 : 54;
+        return (
+          <div key={pos} className="grid min-w-0 justify-items-center gap-2 text-center">
             <motion.div
+              className="flex flex-wrap items-end justify-center gap-1"
               initial={reduce ? false : { y: -60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 380, damping: 16, delay: 0.25 + (2 - place[k]!) * 0.18 }}
+              transition={{ type: "spring", stiffness: 380, damping: 16, delay: 0.25 + (3 - pos) * 0.18 }}
             >
-              <Piece kind={p.piece} mood={positionOf(p) === 1 && p.score > 0 ? "happy" : "neutral"} size={k === 1 ? 72 : 54} alive />
+              {people.map((p) => (
+                <Piece key={p.id} kind={p.piece} mood={pos === 1 && p.score > 0 ? "happy" : "neutral"} size={size} alive />
+              ))}
             </motion.div>
-            <b className="font-display max-w-full truncate text-base font-extrabold">{p.name}</b>
+            <b className="font-display max-w-full text-base leading-tight font-extrabold [overflow-wrap:anywhere]">{joinNames(people.map((p) => p.name))}</b>
             <span className="text-sm font-semibold text-[var(--fg-2)]">
-              {p.score} {unit}
+              {many ? "empate, " : ""}
+              {people[0]!.score} {unit}
             </span>
             <motion.div
               className="num grid w-full place-items-center rounded-t-[18px] rounded-b-lg text-3xl text-[var(--color-tinta)]"
-              style={{ background: C[k], transformOrigin: "bottom" }}
+              style={{ background: C[pos], transformOrigin: "bottom" }}
               initial={reduce ? false : { scaleY: 0 }}
               animate={{ scaleY: 1 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.1 * k }}
             >
-              <span style={{ height: H[k], display: "grid", placeItems: "center" }}>{positionOf(p)}</span>
+              <span style={{ height: H[pos], display: "grid", placeItems: "center" }}>{pos}</span>
             </motion.div>
           </div>
-        ) : (
-          <div key={k} />
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }
