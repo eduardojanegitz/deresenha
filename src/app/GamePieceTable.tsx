@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { animate, AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Piece, PIECES } from "@/brand/Piece";
 import { PIECE_KINDS, type PieceKind } from "@/engine/core";
 import { useSound } from "@/ui/sound";
@@ -14,24 +14,36 @@ let landedThisSession = false;
  */
 export function GamePieceTable() {
   const reduce = useReducedMotion();
-  const [enter] = useState(() => {
-    const first = !landedThisSession;
-    landedThisSession = true;
-    return first;
-  });
+  const row = useRef<HTMLDivElement>(null);
+  // A entrada é decidida só no navegador (o servidor sempre desenha as peças no lugar),
+  // antes da primeira pintura, para não haver diferença de hidratação nem piscada.
+  useLayoutEffect(() => {
+    if (landedThisSession || reduce || !row.current) return;
+    const buttons = Array.from(row.current.children) as HTMLElement[];
+    const anims = buttons.map((el, i) => {
+      el.style.opacity = "0";
+      const delay = 0.75 + i * 0.09;
+      return animate(el, { y: [-90, 0], scaleY: [1.25, 1], opacity: [0, 1] }, { y: { type: "spring", stiffness: 520, damping: 15, mass: 0.9, delay }, scaleY: { type: "spring", stiffness: 520, damping: 15, delay }, opacity: { duration: 0.15, delay } });
+    });
+    Promise.all(anims).then(() => (landedThisSession = true));
+    return () => {
+      anims.forEach((a) => a.stop());
+      buttons.forEach((el) => {
+        el.style.opacity = "";
+        el.style.transform = "";
+      });
+    };
+  }, [reduce]);
   const [said, setSaid] = useState<{ k: PieceKind; n: number } | null>(null);
   const [hopping, setHopping] = useState<PieceKind | null>(null);
   const { play } = useSound();
   return (
     <div>
       <div className="relative mt-1.5">
-        <div className="relative z-[1] flex items-end justify-around px-1.5">
+        <div ref={row} className="relative z-[1] flex items-end justify-around px-1.5">
           {PIECE_KINDS.map((k, i) => (
-            <motion.button
+            <button
               key={k}
-              initial={enter && !reduce ? { y: -90, opacity: 0, scaleY: 1.25 } : false}
-              animate={{ y: 0, opacity: 1, scaleY: 1 }}
-              transition={{ delay: 0.75 + i * 0.09, type: "spring", stiffness: 520, damping: 15, mass: 0.9, opacity: { duration: 0.15, delay: 0.75 + i * 0.09 } }}
               style={{ transformOrigin: "50% 100%" }}
               aria-label={`${PIECES[k].name}: ${PIECES[k].role}`}
               className="rounded-2xl"
@@ -43,7 +55,7 @@ export function GamePieceTable() {
               }}
             >
               <Piece kind={k} size={68} alive blinkDelay={i * 1.3} className={hopping === k ? "hop" : ""} />
-            </motion.button>
+            </button>
           ))}
         </div>
         <div className="-mt-1.5 h-[22px] rounded-xl bg-[var(--color-feltro)] shadow-[0_5px_0_var(--color-feltro-d)]" />
