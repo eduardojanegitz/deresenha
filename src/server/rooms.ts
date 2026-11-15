@@ -22,8 +22,8 @@ export class RoomError extends Error {
 }
 
 const ROOM_TTL = "6 hours";
-const POOL = challengesFor("nota");
-const NOTA_THEMES = themesFor("nota").map((t) => t.id);
+const POOLS = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado") };
+const THEMES = { nota: themesFor("nota").map((t) => t.id), infiltrado: themesFor("infiltrado").map((t) => t.id) };
 /** Atualiza "visto por último" no máximo a cada tantos ms, para não escrever a cada consulta. */
 const HEARTBEAT_EVERY_MS = 8_000;
 
@@ -91,11 +91,11 @@ export async function createRoom(input: { nickname: string; piece: PieceKind }) 
   const token = newToken();
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = newCode();
-    const state = createRoomState(code, { id: playerId, nickname: input.nickname.trim(), piece: input.piece }, Date.now(), NOTA_THEMES);
+    const state = createRoomState(code, { id: playerId, nickname: input.nickname.trim(), piece: input.piece }, Date.now(), THEMES);
     try {
       // Sala e credencial do anfitrião nascem juntas, numa transação.
       await db().transaction((sql) => [
-        sql`insert into rooms (code, game, status, state) values (${code}, 'nota', 'lobby', ${JSON.stringify(state)}::jsonb)`,
+        sql`insert into rooms (code, game, status, state) values (${code}, 'sala', 'lobby', ${JSON.stringify(state)}::jsonb)`,
         sql`insert into room_players (id, room_id, token_hash) select ${playerId}, id, ${hashToken(token)} from rooms where code = ${code}`,
       ]);
       return { code, token, playerId };
@@ -163,7 +163,7 @@ export async function act(code: string, token: string | null, clientActionId: st
     const now = Date.now();
     let next: RoomState;
     try {
-      next = reduceRoom(row.state, playerId, action, { now, rng: Math.random, pool: POOL, presence });
+      next = reduceRoom(row.state, playerId, action, { now, rng: Math.random, pools: POOLS, presence });
     } catch (e) {
       ruleToRoomError(e);
     }

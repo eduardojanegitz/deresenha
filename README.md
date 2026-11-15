@@ -43,7 +43,7 @@ Adicionar um jogo: um motor em `src/engine`, uma entrada em `src/games/registry.
 | 1. Direção e identidade | Feita (`docs/01-direcao.md`) |
 | 2. Fundação visual e funcional | Feita: início, biblioteca, detalhe, configuração, componentes, movimento, temas, modo compartilhado, sons opcionais, manifesto PWA |
 | 3. Jogos prioritários | Feita no modo compartilhado: Jogo da Nota (Avaliação e Nota Secreta), Mímica, Infiltrado, Ranking às Cegas |
-| 4. Multiplayer real (Modo Sala) | Feita para o Jogo da Nota (Nota Secreta e Avaliação): criar sala, código/link/QR, lobby, prontidão, configuração pelo anfitrião, sincronização, nota secreta só para quem pensa, palpites escondidos até a revelação, cronômetro controlado pelo servidor, reentrada, saída, transferência e recuperação do comando, encerramento e expiração (6 h). Os outros jogos ainda são só no modo compartilhado. |
+| 4. Multiplayer real (Modo Sala) | Feita para o Jogo da Nota (Nota Secreta e Avaliação) e o Infiltrado: criar sala, código/link/QR, lobby, prontidão, configuração pelo anfitrião, sincronização, nota secreta só para quem pensa, palpites escondidos até a revelação, cronômetro controlado pelo servidor, reentrada, saída, transferência e recuperação do comando, encerramento e expiração (6 h). No Infiltrado, cada celular recebe só a própria palavra e o voto é secreto no aparelho. Limite de tentativas por IP nas rotas (em memória, por instância). Mímica e Ranking ainda são só no modo compartilhado. |
 | 5. Recursos adicionais | Não iniciada. Normalização da Noite de Jogos já existe e é testada (`championship.ts`). |
 
 Também ainda não existem: painel administrativo, temas personalizados, service worker (offline).

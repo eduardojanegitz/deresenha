@@ -52,7 +52,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
           {g.available.includes("room") ? (
             <div className="card mt-8 grid gap-3 p-5">
               <h2>Cada um no seu celular</h2>
-              <p className="muted">Crie uma sala e a turma entra pelo código, link ou QR Code. A nota secreta chega só no celular de quem pensa.</p>
+              <p className="muted">Crie uma sala e a turma entra pelo código, link ou QR Code. Os segredos chegam só no celular de quem pode ver.</p>
               <Link href="/sala" className="btn btn-ghost">
                 Criar ou entrar numa sala
               </Link>

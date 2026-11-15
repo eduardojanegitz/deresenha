@@ -119,6 +119,8 @@ describe("Infiltrado", () => {
     s = reduceInfiltrado(s, { type: "vote", voterId: "ana", targetId: "beto" }, pool, rng);
     const v = viewInfiltradoFor(s, "caio");
     expect(v.votes).toEqual({});
+    expect(v.voted).toEqual(["ana"]);
+    expect(v.myVote).toBeNull();
     expect(v.impostorId).toBeNull();
     expect(v.myWord).toBe(wordFor(s, "caio"));
     expect(JSON.stringify(v)).not.toContain(s.impostorId === "caio" ? s.pair.major : s.pair.impostor);

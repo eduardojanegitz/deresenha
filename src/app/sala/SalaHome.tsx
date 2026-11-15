@@ -40,7 +40,7 @@ export function SalaHome() {
     <div className="mx-auto grid max-w-[960px] gap-6 px-4 pt-2 pb-16 md:grid-cols-2 md:items-start">
       <div className="md:col-span-2">
         <h1>Cada um no seu celular</h1>
-        <p className="muted mt-2 max-w-[52ch]">Uma pessoa cria a sala e a turma entra pelo código, pelo link ou pelo QR Code. Sem cadastro. Por enquanto, o Jogo da Nota funciona neste modo.</p>
+        <p className="muted mt-2 max-w-[52ch]">Uma pessoa cria a sala e a turma entra pelo código, pelo link ou pelo QR Code. Sem cadastro. Funciona com o Jogo da Nota e o Infiltrado.</p>
       </div>
 
       <form onSubmit={join} className="card grid gap-4 rounded-[28px] p-5" noValidate>

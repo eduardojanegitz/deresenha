@@ -234,7 +234,7 @@ function InfiltradoMatch({ config, players, pool, onRematch, onSetup }: { config
   );
 }
 
-function Reveal({ s, P, onNext }: { s: InfiltradoState; P: (id: string) => Player; onNext: () => void }) {
+export function Reveal({ s, P, onNext, canAdvance = true }: { s: Pick<InfiltradoState, "result" | "players" | "round" | "config">; P: (id: string) => Player; onNext: () => void; canAdvance?: boolean }) {
   const r = s.result!;
   const reduce = useReducedMotion();
   const [step, setStep] = useState(reduce ? 3 : 0);
@@ -308,9 +308,13 @@ function Reveal({ s, P, onNext }: { s: InfiltradoState; P: (id: string) => Playe
             .map(([id, v]) => `${P(id).name} +${v}`)
             .join(", ") || "Ninguém pontuou nesta rodada."}
         </p>
-        <button className="btn btn-gema" onClick={onNext}>
-          {s.round >= s.config.rounds ? "Ver resultado" : "Próxima rodada"}
-        </button>
+        {canAdvance ? (
+          <button className="btn btn-gema" onClick={onNext}>
+            {s.round >= s.config.rounds ? "Ver resultado" : "Próxima rodada"}
+          </button>
+        ) : (
+          <p className="muted py-2">Esperando quem comanda a sala avançar.</p>
+        )}
       </motion.div>
     </div>
   );

@@ -29,7 +29,16 @@ const notaAction = z.discriminatedUnion("type", [
   z.object({ type: z.literal("next") }),
 ]);
 
+const infiltradoAction = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("seen") }),
+  z.object({ type: z.literal("next-hint-round") }),
+  z.object({ type: z.literal("open-vote") }),
+  z.object({ type: z.literal("vote"), targetId: z.string().uuid() }),
+  z.object({ type: z.literal("close-vote") }),
+]);
+
 export const roomActionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("set-game"), game: z.enum(["nota", "infiltrado"]) }),
   z.object({ type: z.literal("set-ready"), ready: z.boolean() }),
   z.object({
     type: z.literal("configure"),
@@ -44,6 +53,7 @@ export const roomActionSchema = z.discriminatedUnion("type", [
       })
       .partial()
       .optional(),
+    infiltrado: z.object({ rounds: z.number().int().min(1).max(10), hintRounds: z.number().int().min(1).max(3) }).partial().optional(),
     themes: z.array(z.string().max(40)).max(30).optional(),
   }),
   z.object({ type: z.literal("start") }),
@@ -54,7 +64,7 @@ export const roomActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("time-up") }),
   z.object({ type: z.literal("back-to-lobby") }),
   z.object({ type: z.literal("close") }),
-  z.object({ type: z.literal("game"), action: notaAction }),
+  z.object({ type: z.literal("game"), action: z.union([notaAction, infiltradoAction]) }),
 ]);
 
 export const actionBody = z.object({

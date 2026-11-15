@@ -7,15 +7,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Piece } from "@/brand/Piece";
 import { themeLabel, themesFor } from "@/content/library";
 import { PIECE_KINDS, type PieceKind, type Player } from "@/engine/core";
-import { guessersOf, MIN_PLAYERS } from "@/engine/nota";
+import { guessersOf } from "@/engine/nota";
 import { EndPhase, RevealPhase } from "@/games/nota/NotaGame";
 import { useRoom } from "@/rooms/client";
-import type { RoomView } from "@/rooms/room";
+import { minPlayersFor, ROOM_GAMES, type RoomGame, type RoomMatchView, type RoomView } from "@/rooms/room";
+import { InfiltradoRoom } from "./InfiltradoRoom";
+
 import { ChipGroup, ErrorNote, NumberPad, PhaseStage, Progress, PromptCard, Scoreboard, Sheet, Stepper, Toggle, useTone, Who } from "@/ui/play";
 import { useSound } from "@/ui/sound";
 import { PiecePicker } from "../PiecePicker";
 
-type Room = ReturnType<typeof useRoom>;
+const GAME_NAME: Record<RoomGame, string> = { nota: "Jogo da Nota", infiltrado: "Infiltrado" };
+
+export type Room = ReturnType<typeof useRoom>;
 
 export function RoomScreen({ code }: { code: string }) {
   const room = useRoom(code);
@@ -30,7 +34,7 @@ export function RoomScreen({ code }: { code: string }) {
   return (
     <div className="mx-auto max-w-[560px] px-4 pt-1 pb-16">
       <ConnectionBanner conn={conn} />
-      {view.status === "lobby" ? <Lobby view={view} room={room} /> : <NotaRoom view={view} room={room} />}
+      {view.status === "lobby" || !view.match ? <Lobby view={view} room={room} /> : view.match.game === "nota" ? <NotaRoom view={view} room={room} /> : <InfiltradoRoom view={view} room={room} />}
     </div>
   );
 }
@@ -190,18 +194,22 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
   const host = view.players.find((p) => p.id === view.hostId);
   const amHost = view.me === view.hostId;
   const active = view.players.filter((p) => !p.left);
-  const min = MIN_PLAYERS[view.config.mode];
+  const min = minPlayersFor(view);
   const [target, setTarget] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const allThemes = useMemo(
     () => ({
       secreta: themesFor("nota", (c) => c.game === "nota" && c.kind === "secreta").map((t) => t.id),
       avaliacao: themesFor("nota", (c) => c.game === "nota" && c.kind === "avaliacao").map((t) => t.id),
+      infiltrado: themesFor("infiltrado").map((t) => t.id),
     }),
     [],
   );
-  const modeThemes = allThemes[view.config.mode];
-  const selected = view.themes.filter((t) => modeThemes.includes(t));
+  const nc = view.config.nota;
+  const ic = view.config.infiltrado;
+  const gameThemes = view.game === "nota" ? allThemes[nc.mode] : allThemes.infiltrado;
+  const current = view.themes[view.game];
+  const selected = current.filter((t) => gameThemes.includes(t));
   const { play } = useSound();
   const count = useRef(active.length);
   useEffect(() => {
@@ -215,7 +223,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
     <div className="grid gap-6">
       <div>
         <h1>Lobby</h1>
-        <p className="muted mt-1">Jogo da Nota. {amHost ? "Você comanda a sala." : `${host?.nickname ?? "Alguém"} comanda a sala.`}</p>
+        <p className="muted mt-1">{GAME_NAME[view.game]}. {amHost ? "Você comanda a sala." : `${host?.nickname ?? "Alguém"} comanda a sala.`}</p>
       </div>
       <ShareCard code={view.code} />
 
@@ -253,47 +261,70 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
         <section className="grid gap-6" aria-label="Configuração">
           <h2>Partida</h2>
           <div className="grid gap-2.5">
-            <span className="label" id="modo">
-              Modo
+            <span className="label" id="jogo">
+              Jogo
             </span>
-            <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-labelledby="modo">
-              {(
-                [
-                  ["secreta", "Nota Secreta"],
-                  ["avaliacao", "Avaliação"],
-                ] as const
-              ).map(([id, label]) => (
-                <button key={id} role="radio" aria-checked={view.config.mode === id} className="chip justify-center py-3.5 text-base" onClick={() => room.act({ type: "configure", config: { mode: id }, themes: view.themes.length ? [...new Set([...view.themes, ...allThemes[id]])] : allThemes[id] })}>
-                  {label}
+            <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-labelledby="jogo">
+              {ROOM_GAMES.map((g) => (
+                <button key={g} role="radio" aria-checked={view.game === g} onClick={() => room.act({ type: "set-game", game: g })} className={`grid justify-items-center gap-1.5 rounded-[20px] border-[2.5px] bg-[var(--card)] p-3 ${view.game === g ? "border-[var(--color-tinta)] shadow-[inset_0_0_0_1.5px_var(--color-tinta)]" : "border-[var(--line)]"}`}>
+                  <Piece kind={g === "nota" ? "tijolo" : "pino"} mood={view.game === g ? "happy" : "neutral"} size={40} />
+                  <b className="font-display text-base font-extrabold">{GAME_NAME[g]}</b>
                 </button>
               ))}
             </div>
           </div>
+          {view.game === "nota" && (
+            <div className="grid gap-2.5">
+              <span className="label" id="modo">
+                Modo
+              </span>
+              <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-labelledby="modo">
+                {(
+                  [
+                    ["secreta", "Nota Secreta"],
+                    ["avaliacao", "Avaliação"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button key={id} role="radio" aria-checked={nc.mode === id} className="chip justify-center py-3.5 text-base" onClick={() => room.act({ type: "configure", config: { mode: id }, themes: [...new Set([...current, ...allThemes[id]])] })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <ChipGroup
             label="Temas"
             multi
-            options={modeThemes.map((id) => ({ value: id, label: themeLabel(id) }))}
+            options={gameThemes.map((id) => ({ value: id, label: themeLabel(id) }))}
             value={selected}
             onToggle={(id) => {
-              const on = view.themes.includes(id);
-              const nextSel = on ? selected.filter((x) => x !== id) : [...selected, id];
+              const nextSel = current.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
               if (nextSel.length === 0) return;
-              const others = view.themes.filter((x) => !modeThemes.includes(x));
+              const others = current.filter((x) => !gameThemes.includes(x));
               room.act({ type: "configure", themes: [...others, ...nextSel] }, { quiet: true });
             }}
           />
-          <Stepper label="Rodadas" value={view.config.rounds} min={1} max={12} onChange={(rounds) => room.act({ type: "configure", config: { rounds } }, { quiet: true })} />
-          {view.config.mode === "secreta" ? (
+          {view.game === "nota" ? (
             <>
-              <ChipGroup label="Tempo para responder e chutar" options={[30, 45, 60, 0].map((v) => ({ value: v, label: v ? `${v} s` : "Sem tempo" }))} value={[view.config.timerSec]} onToggle={(timerSec) => room.act({ type: "configure", config: { timerSec } }, { quiet: true })} />
-              <Toggle checked={view.config.tellerBonus} onChange={(tellerBonus) => room.act({ type: "configure", config: { tellerBonus } }, { quiet: true })}>
-                Quem dá a dica ganha metade da média da turma
-              </Toggle>
+              <Stepper label="Rodadas" value={nc.rounds} min={1} max={12} onChange={(rounds) => room.act({ type: "configure", config: { rounds } }, { quiet: true })} />
+              {nc.mode === "secreta" ? (
+                <>
+                  <ChipGroup label="Tempo para responder e chutar" options={[30, 45, 60, 0].map((v) => ({ value: v, label: v ? `${v} s` : "Sem tempo" }))} value={[nc.timerSec]} onToggle={(timerSec) => room.act({ type: "configure", config: { timerSec } }, { quiet: true })} />
+                  <Toggle checked={nc.tellerBonus} onChange={(tellerBonus) => room.act({ type: "configure", config: { tellerBonus } }, { quiet: true })}>
+                    Quem dá a dica ganha metade da média da turma
+                  </Toggle>
+                </>
+              ) : (
+                <Toggle checked={nc.scoreAvaliacao} onChange={(scoreAvaliacao) => room.act({ type: "configure", config: { scoreAvaliacao } }, { quiet: true })}>
+                  Pontuar quem chegar mais perto da média da turma
+                </Toggle>
+              )}
             </>
           ) : (
-            <Toggle checked={view.config.scoreAvaliacao} onChange={(scoreAvaliacao) => room.act({ type: "configure", config: { scoreAvaliacao } }, { quiet: true })}>
-              Pontuar quem chegar mais perto da média da turma
-            </Toggle>
+            <>
+              <Stepper label="Rodadas" value={ic.rounds} min={1} max={10} onChange={(rounds) => room.act({ type: "configure", infiltrado: { rounds } }, { quiet: true })} />
+              <Stepper label="Voltas de dicas antes de votar" value={ic.hintRounds} min={1} max={3} onChange={(hintRounds) => room.act({ type: "configure", infiltrado: { hintRounds } }, { quiet: true })} />
+            </>
           )}
           <div className="sticky-cta">
             <button className="btn btn-gema" disabled={active.length < min || room.pending} onClick={() => room.act({ type: "start" })}>
@@ -304,10 +335,12 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
       ) : (
         <section className="grid gap-4">
           <div className="card grid gap-1 rounded-[22px] p-4 text-[15px]">
-            <b className="font-display text-lg font-extrabold">{view.config.mode === "secreta" ? "Nota Secreta" : "Avaliação"}</b>
+            <b className="font-display text-lg font-extrabold">{view.game === "nota" ? (nc.mode === "secreta" ? "Nota Secreta" : "Avaliação") : "Infiltrado"}</b>
             <span className="muted">
-              {view.config.rounds} {view.config.rounds === 1 ? "rodada" : "rodadas"}
-              {view.config.mode === "secreta" && view.config.timerSec ? `, ${view.config.timerSec} s por etapa` : ""}. Temas: {selected.map(themeLabel).join(", ")}.
+              {view.game === "nota"
+                ? `${nc.rounds} ${nc.rounds === 1 ? "rodada" : "rodadas"}${nc.mode === "secreta" && nc.timerSec ? `, ${nc.timerSec} s por etapa` : ""}`
+                : `${ic.rounds} ${ic.rounds === 1 ? "rodada" : "rodadas"}, ${ic.hintRounds} ${ic.hintRounds === 1 ? "volta" : "voltas"} de dicas`}
+              . Temas: {selected.map(themeLabel).join(", ")}.
             </span>
           </div>
           <button className={`btn ${me.ready ? "btn-ghost" : "btn-gema"}`} onClick={() => room.act({ type: "set-ready", ready: !me.ready })}>
@@ -375,7 +408,7 @@ function LeaveSheet({ open, onClose, room, amHost }: { open: boolean; onClose: (
 
 /* ---------- cronômetro controlado pelo servidor ---------- */
 
-function useDeadline(view: RoomView, room: Room) {
+export function useDeadline(view: RoomView, room: Room) {
   const [left, setLeft] = useState<number | null>(null);
   const sent = useRef<number | null>(null);
   const { play } = useSound();
@@ -406,7 +439,7 @@ function useDeadline(view: RoomView, room: Room) {
   return left;
 }
 
-function DeadlineRing({ left, total }: { left: number; total: number }) {
+export function DeadlineRing({ left, total }: { left: number; total: number }) {
   const C = 2 * Math.PI * 44;
   const low = left <= 5 && left > 0;
   return (
@@ -425,7 +458,8 @@ function DeadlineRing({ left, total }: { left: number; total: number }) {
 /* ---------- partida: Jogo da Nota em salas ---------- */
 
 function NotaRoom({ view, room }: { view: RoomView; room: Room }) {
-  const s = view.match!;
+  const mv = view.match as Extract<RoomMatchView, { game: "nota" }>;
+  const s = mv.state;
   const amHost = view.me === view.hostId;
   const hostName = view.players.find((p) => p.id === view.hostId)?.nickname ?? "quem comanda";
   const P = (id: string) => s.players.find((p) => p.id === id) ?? ({ id, name: "?", piece: "bolota" } as Player);
@@ -534,7 +568,7 @@ function NotaRoom({ view, room }: { view: RoomView; room: Room }) {
           )}
           <ul className="flex flex-wrap gap-2" aria-label="Quem já respondeu">
             {ids.map((id) => {
-              const done = view.answered.includes(id);
+              const done = mv.answered.includes(id);
               return (
                 <motion.li key={id} layout animate={done ? { scale: [1, 1.1, 1] } : {}} className={`inline-flex items-center gap-1.5 rounded-full border-2 bg-[var(--card)] py-[3px] pr-3 pl-1 font-semibold ${done ? "border-[var(--color-ok)]" : "border-[var(--line)]"} ${offline.includes(id) ? "opacity-50" : ""}`}>
                   <Piece kind={P(id).piece} size={28} />
@@ -545,7 +579,7 @@ function NotaRoom({ view, room }: { view: RoomView; room: Room }) {
             })}
           </ul>
           {amHost && (
-            <button className="btn btn-ghost" disabled={view.answered.length === 0} onClick={() => game({ type: "close-guesses" })}>
+            <button className="btn btn-ghost" disabled={mv.answered.length === 0} onClick={() => game({ type: "close-guesses" })}>
               Revelar com quem já respondeu
             </button>
           )}

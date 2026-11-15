@@ -52,7 +52,7 @@ export type InfiltradoAction =
   | { type: "next-hint-round" }
   | { type: "open-vote" }
   | { type: "vote"; voterId: string; targetId: string }
-  | { type: "close-vote" }
+  | { type: "close-vote"; force?: boolean }
   | { type: "next" };
 
 /** Palavra que cada pessoa recebe. O infiltrado não sabe que é o infiltrado. */
@@ -158,7 +158,8 @@ export function reduceInfiltrado(s: InfiltradoState, a: InfiltradoAction, pool: 
     }
     case "close-vote": {
       assertRule(s.phase === "vote", "phase", "A votação já foi fechada.");
-      assertRule(pendingVoters(s).length === 0, "pending", "Ainda falta gente votar.");
+      assertRule(pendingVoters(s).length === 0 || a.force, "pending", "Ainda falta gente votar.");
+      assertRule(Object.keys(s.votes).length > 0, "empty", "Ninguém votou ainda.");
       const t = tally(s.votes);
       const max = Math.max(...Object.values(t));
       const top = Object.keys(t).filter((id) => t[id] === max);
@@ -174,18 +175,31 @@ export function reduceInfiltrado(s: InfiltradoState, a: InfiltradoAction, pool: 
   }
 }
 
-/** Projeção para o Modo Sala: cada um só recebe a própria palavra e nenhum voto alheio. */
+/**
+ * Projeção para o Modo Sala: cada um só recebe a própria palavra, quem já viu/votou (sem o voto)
+ * e, só depois da revelação, quem era o infiltrado e as duas palavras.
+ */
 export function viewInfiltradoFor(s: InfiltradoState, viewerId: string) {
   const revealed = s.phase === "reveal" || s.phase === "end";
   return {
+    game: "infiltrado" as const,
     phase: s.phase,
     round: s.round,
+    config: s.config,
     players: s.players,
     myWord: wordFor(s, viewerId),
-    impostorId: revealed ? s.impostorId : null,
-    votes: revealed ? s.votes : s.votes[viewerId] ? { [viewerId]: s.votes[viewerId] } : {},
+    theme: s.pair.theme,
+    starterId: s.starterId,
+    hintRound: s.hintRound,
+    seen: s.seen,
+    voted: Object.keys(s.votes),
+    myVote: s.votes[viewerId] ?? null,
     candidates: s.candidates,
+    wentToRevote: s.wentToRevote,
+    impostorId: revealed ? s.impostorId : null,
+    votes: revealed ? s.votes : {},
     scores: s.scores,
     result: revealed ? s.result : null,
   };
 }
+export type InfiltradoView = ReturnType<typeof viewInfiltradoFor>;
