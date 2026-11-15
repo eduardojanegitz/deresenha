@@ -2,15 +2,12 @@
 
 import { animate, useReducedMotion } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
-import WORD from "./wordmark-glyphs.json";
+import { COLORS, D, DEPTH, DEPTH_SLANT, E1, EYES, LETTERS, LINE, MONO_LEFT, MONO_RIGHT, R, R_SHIFT, TAIL, WORD_WIDTH, type Letter } from "./letreiro";
 
 /**
  * Assinatura "letreiro de boteco": o monograma DR se abre e vira "DeResenha".
- *
- * Desenho: letras gordas e arredondadas (contornos da Titan One, licença SIL OFL 1.1,
- * convertidos em caminhos em src/brand/wordmark-glyphs.json, sem carregar fonte), recheio creme, contorno verde-noite grosso e sombra em bloco
- * verde-feltro, como placa pintada à mão. O D é um bloco amarelo com rosto: o personagem da
- * marca, parente das peças. Escala: maiúscula com 100 de altura, linha de base em y = 100.
+ * Desenho e cores em ./letreiro.ts. Recheio creme, contorno verde-noite grosso e sombra em
+ * bloco verde-feltro, como placa pintada à mão; o D é um bloco amarelo com rosto.
  *
  * Camadas: todas as sombras ficam atrás de todos os recheios, como numa placa pintada. Cada
  * letra existe nas duas camadas e as duas cópias se movem juntas.
@@ -19,25 +16,7 @@ import WORD from "./wordmark-glyphs.json";
  * "esenha" sai de trás do DR. Molas em transform; com "reduzir movimento", aparece pronta.
  */
 
-const COLORS = { face: "#fff3d6", d: "var(--color-gema)", line: "var(--color-noite)", shadow: "var(--color-feltro)", eye: "var(--color-noite)" };
-/** Contorno (metade fica para fora) e profundidade da sombra em bloco, em unidades da letra. */
-const LINE = 9;
-const DEPTH = 9;
-/** Olhos no corpo do D: centro, distância, tamanho. */
-const EYES = { cx: 52, cy: 47, gap: 19, w: 8.5, h: 21 };
-/** Quanto do R fica por baixo do D no monograma encaixado. */
-const OVERLAP = 26;
-
-type Letter = { ch: string; x: number; d: string; adv: number; bbox: [number, number, number, number] };
-const LETTERS = WORD.letters as unknown as Letter[];
-const [D, E1, R] = LETTERS as [Letter, Letter, Letter];
-const TAIL = LETTERS.slice(3);
-
-// Geometria do encaixe: o R começa com a haste por baixo da borda direita do D.
-const R_SHIFT = D.x + D.bbox[2] - OVERLAP - (R.x + R.bbox[0]);
-const MONO_LEFT = D.x + D.bbox[0];
-const MONO_RIGHT = R.x + R.bbox[2] + R_SHIFT;
-const CENTER_SHIFT = WORD.width / 2 - (MONO_LEFT + MONO_RIGHT) / 2;
+const CENTER_SHIFT = WORD_WIDTH / 2 - (MONO_LEFT + MONO_RIGHT) / 2;
 const MONO_CENTER = { x: (MONO_LEFT + MONO_RIGHT) / 2, y: 50 };
 
 let playedThisSession = false;
@@ -147,7 +126,7 @@ function Layer({ kind }: { kind: "shadow" | "face" }) {
     if (kind === "shadow") {
       // Sombra em bloco: cópias empilhadas na diagonal, já com a espessura do contorno.
       return Array.from({ length: DEPTH }, (_, k) => (
-        <path key={k} d={l.d} transform={`translate(${l.x + (k + 1) * 0.8} ${k + 1})`} fill={COLORS.shadow} stroke={COLORS.shadow} strokeWidth={LINE * 2} />
+        <path key={k} d={l.d} transform={`translate(${l.x + (k + 1) * DEPTH_SLANT} ${k + 1})`} fill={COLORS.shadow} stroke={COLORS.shadow} strokeWidth={LINE * 2} />
       ));
     }
     return <path d={l.d} transform={`translate(${l.x} 0)`} fill={i === 0 ? COLORS.d : COLORS.face} stroke={COLORS.line} strokeWidth={LINE * 2} paintOrder="stroke" />;
@@ -183,7 +162,7 @@ function Layer({ kind }: { kind: "shadow" | "face" }) {
 export function SignatureSVG({ ref, className = "" }: { ref?: React.Ref<SVGSVGElement>; className?: string }) {
   const pad = LINE + 4;
   return (
-    <svg ref={ref} className={`overflow-visible ${className}`} viewBox={`${-pad} ${-10 - pad} ${WORD.width + pad * 2 + DEPTH} ${112 + pad * 2 + DEPTH}`} role="img" aria-label="DeResenha">
+    <svg ref={ref} className={`overflow-visible ${className}`} viewBox={`${-pad} ${-10 - pad} ${WORD_WIDTH + pad * 2 + DEPTH} ${112 + pad * 2 + DEPTH}`} role="img" aria-label="DeResenha">
       <Layer kind="shadow" />
       <Layer kind="face" />
     </svg>

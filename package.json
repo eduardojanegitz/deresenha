@@ -10,7 +10,8 @@
     "test": "vitest run",
     "db:migrate": "node --env-file=.env scripts/migrate.mjs",
     "db:seed": "node --env-file=.env scripts/seed-content.ts",
-    "admin:password": "node scripts/admin-password.mjs"
+    "admin:password": "node scripts/admin-password.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.1",

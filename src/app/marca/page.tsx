@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { D_PATH, Monogram, R_BOWL, R_LEG } from "@/brand/Monogram";
+import { Monogram } from "@/brand/Monogram";
 import { Piece, PIECES } from "@/brand/Piece";
 import { PIECE_KINDS } from "@/engine/core";
 import { SignatureReplay } from "./SignatureReplay";
@@ -26,33 +26,16 @@ export default function MarcaPage() {
   return (
     <div className="mx-auto max-w-[1120px] px-4 pt-2 pb-16">
       <h1>Marca</h1>
-      <p className="muted mt-2 max-w-[56ch]">O DeResenha é a caixa de jogos da turma. Tudo nasce de peças de tabuleiro que ganharam vida, sobre uma mesa de feltro.</p>
+      <p className="muted mt-2 max-w-[56ch]">O DeResenha é a caixa de jogos da turma. Tudo nasce de peças de tabuleiro que ganharam vida, sobre uma mesa de feltro. O nome é pintado como letreiro de boteco, onde a resenha acontece.</p>
 
       <section className="mt-8">
         <h2 className="mb-3">Monograma</h2>
-        <div className="card grid place-items-center rounded-[28px] px-5 py-7">
-          <svg className="h-auto w-full max-w-[360px]" viewBox="-20 -20 165 140" role="img" aria-label="Construção do monograma DR">
-            <g stroke="#C9D8CE" strokeWidth={1} strokeDasharray="3 3">
-              <path d="M-20 0H145M-20 100H145M-20 50H145M62 -20V120M0 -20V120" />
-            </g>
-            <g fill="none" stroke="var(--color-tinta)" strokeWidth={18} strokeLinecap="round" strokeLinejoin="round">
-              <path d={D_PATH} />
-              <g transform="translate(62 0)">
-                <path d={R_BOWL} />
-                <path d={R_LEG} />
-              </g>
-            </g>
-            <g fill="none" stroke="var(--color-chiclete)" strokeWidth={1.6}>
-              <path d={D_PATH} />
-              <g transform="translate(62 0)">
-                <path d={R_BOWL} />
-                <path d={R_LEG} />
-              </g>
-            </g>
-            <circle cx={62} cy={50} r={4} fill="var(--color-gema)" />
-          </svg>
+        <div className="card grid place-items-center rounded-[28px] px-5 py-8">
+          <Monogram className="h-auto w-full max-w-[220px]" label="Monograma DR" />
         </div>
-        <p className="muted mt-3 max-w-[60ch]">Um traço só, 18 unidades de espessura em 100 de altura, pontas redondas. O trecho reto do D é a haste do R: duas peças encaixadas no ponto amarelo.</p>
+        <p className="muted mt-3 max-w-[60ch]">
+          O D e o R encaixados, como no começo da assinatura. Letras da Titan One, recheio creme, contorno verde-noite e sombra em bloco verde-feltro. O D é um bloco amarelo com rosto, parente das peças: pisca, espia e conduz a abertura do nome.
+        </p>
       </section>
 
       <section className="mt-8">
@@ -64,20 +47,20 @@ export default function MarcaPage() {
         <h2 className="mb-3">Tamanhos e cores</h2>
         <div className="flex flex-wrap items-end gap-[18px]">
           {[16, 24, 32, 48, 72, 112].map((s) => (
-            <div key={s} className="grid place-items-center rounded-[22%] bg-[var(--color-feltro)] text-white" style={{ width: s, height: s }}>
-              <Monogram className="h-auto w-[68%]" />
+            <div key={s} className="grid place-items-center rounded-[22%] bg-[var(--color-feltro)]" style={{ width: s, height: s }}>
+              <Monogram className="h-auto w-[74%]" shadow="#062a20" />
             </div>
           ))}
         </div>
         <div className="mt-3.5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
           {[
-            ["#fff", "var(--color-tinta)"],
-            ["var(--color-feltro)", "#fff"],
-            ["var(--color-gema)", "var(--color-tinta)"],
-            ["var(--color-noite)", "var(--color-gema)"],
-          ].map(([bg, fg]) => (
-            <div key={bg} className="grid place-items-center rounded-[22px] p-[22px]" style={{ background: bg, color: fg }}>
-              <Monogram className="h-14 w-auto" />
+            ["#fff", undefined],
+            ["var(--color-feltro)", "#062a20"],
+            ["var(--color-chiclete-t)", undefined],
+            ["var(--color-noite)", "#0f6b52"],
+          ].map(([bg, shadow]) => (
+            <div key={bg} className="grid place-items-center rounded-[22px] p-[22px]" style={{ background: bg }}>
+              <Monogram className="h-14 w-auto" shadow={shadow} />
             </div>
           ))}
         </div>

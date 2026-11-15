@@ -26,7 +26,7 @@ export function TopBar() {
         </button>
       )}
       <Link href="/" className="flex items-center rounded-xl p-1" aria-label="DeResenha, início">
-        <Monogram className="h-[30px] w-auto" />
+        <Monogram className="h-[34px] w-auto" />
       </Link>
       <nav className="ml-auto flex items-center gap-0.5" aria-label="Principal">
         {nav.map((n) => {

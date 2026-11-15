@@ -282,7 +282,7 @@ export function HoldToReveal({ secret, onPeek, srText }: { secret: React.ReactNo
       <div className="aspect-[5/6] w-[min(68vw,240px)]" style={{ perspective: 900 }}>
         <motion.div className="relative size-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: open ? 180 : 0 }} transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 26 }}>
           <div className="absolute inset-0 grid place-items-center rounded-[28px] bg-[var(--color-noite-2)] text-[#2C7A62] shadow-[inset_0_0_0_3px_#1E5A48] [backface-visibility:hidden]">
-            <Monogram className="h-auto w-[46%]" />
+            <Monogram tone="flat" className="h-auto w-[46%]" />
           </div>
           <div
             className="absolute inset-0 grid place-items-center rounded-[28px] bg-[var(--color-gema)] p-4 text-center text-[var(--color-tinta)] shadow-[0_6px_0_var(--color-gema-d)] [backface-visibility:hidden]"

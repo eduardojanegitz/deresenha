@@ -1,18 +1,44 @@
-/** Geometria do monograma: traço de 18 em caixa de 100, pontas redondas. O trecho reto do D é a haste do R. */
-export const D_PATH = "M9 91V9H30A32 32 0 0 1 62 41V59A32 32 0 0 1 30 91Z";
-export const R_BOWL = "M0 91V9H18A21 21 0 0 1 18 51H0";
-export const R_LEG = "M14 51L42 91";
+import { COLORS, D, DEPTH, DEPTH_SLANT, EYES, LINE, MONO_LEFT, MONO_RIGHT, R, R_SHIFT, type Letter } from "./letreiro";
 
-export function Monogram({ className = "", label }: { className?: string; label?: string }) {
+/**
+ * Monograma: o DR encaixado do letreiro (o mesmo estado em que a assinatura começa).
+ * O D amarelo com rosto fica por cima do R creme; contorno verde-noite e sombra em bloco.
+ *
+ * `shadow` troca a cor da sombra quando o fundo já é verde-feltro (senão ela some).
+ * `tone="flat"` desenha numa cor só (currentColor), para lugares discretos como o verso
+ * das cartas; o rosto continua lá.
+ */
+
+const PAD = LINE + 2;
+const X0 = MONO_LEFT - PAD;
+const Y0 = Math.min(D.bbox[1], R.bbox[1]) - PAD;
+const W = MONO_RIGHT - MONO_LEFT + PAD * 2 + DEPTH * DEPTH_SLANT;
+const H = 100 - Math.min(D.bbox[1], R.bbox[1]) + PAD * 2 + DEPTH;
+export const MONOGRAM_VIEWBOX = `${X0.toFixed(1)} ${Y0.toFixed(1)} ${W.toFixed(1)} ${H.toFixed(1)}`;
+
+const at = (l: Letter, dx = 0, dy = 0) => `translate(${(l.x + dx).toFixed(2)} ${dy})`;
+
+export function Monogram({ className = "", label, shadow = COLORS.shadow, tone = "color" }: { className?: string; label?: string; shadow?: string; tone?: "color" | "flat" }) {
+  const eyes = (fill: string) =>
+    [-1, 1].map((s) => <rect key={s} x={D.x + EYES.cx + (s * EYES.gap) / 2 - EYES.w / 2} y={EYES.cy - EYES.h / 2} width={EYES.w} height={EYES.h} rx={EYES.w / 2} fill={fill} />);
   return (
-    <svg className={className} viewBox="-6 -6 125 112" role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
-      <g fill="none" stroke="currentColor" strokeWidth={18} strokeLinecap="round" strokeLinejoin="round">
-        <path d={D_PATH} />
-        <g transform="translate(62 0)">
-          <path d={R_BOWL} />
-          <path d={R_LEG} />
+    <svg className={className} viewBox={MONOGRAM_VIEWBOX} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+      {tone === "flat" ? (
+        <g fill="currentColor">
+          <path d={R.d} transform={at(R, R_SHIFT)} opacity={0.55} />
+          <path d={D.d} transform={at(D)} />
+          {eyes("rgba(0,0,0,.35)")}
         </g>
-      </g>
+      ) : (
+        <g strokeLinejoin="round" strokeWidth={LINE * 2}>
+          {[R, D].map((l) =>
+            Array.from({ length: DEPTH }, (_, k) => <path key={`${l.ch}${k}`} d={l.d} transform={at(l, (l === R ? R_SHIFT : 0) + (k + 1) * DEPTH_SLANT, k + 1)} fill={shadow} stroke={shadow} />),
+          )}
+          <path d={R.d} transform={at(R, R_SHIFT)} fill={COLORS.face} stroke={COLORS.line} paintOrder="stroke" />
+          <path d={D.d} transform={at(D)} fill={COLORS.d} stroke={COLORS.line} paintOrder="stroke" />
+          {eyes(COLORS.eye)}
+        </g>
+      )}
     </svg>
   );
 }
