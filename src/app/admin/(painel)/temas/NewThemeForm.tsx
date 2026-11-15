@@ -13,7 +13,7 @@ export function NewThemeForm() {
       </label>
       <label className="grid gap-2">
         <span className="label">Identificador</span>
-        <input name="id" className="input" maxLength={30} placeholder="viagem-fim-de-ano" pattern={"[a-z0-9\-]{2,30}"} required />
+        <input name="id" className="input" maxLength={30} placeholder="viagem-fim-de-ano" minLength={2} pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Letras minúsculas, números e hífen, sem espaços" required />
       </label>
       <button className="btn btn-small h-[52px]" disabled={pending}>
         Criar tema
