@@ -5,10 +5,11 @@ import { useEffect, useRef } from "react";
 import { D_PATH } from "./Monogram";
 
 /**
- * Assinatura viva: "DeResenha" com o mesmo traço do monograma, cada letra numa cor das
- * peças e com a base escura delas. O D tem olhos (é o rosto da marca): pisca e espia o R.
+ * Assinatura viva: "DeResenha" com o mesmo traço do monograma. A cor fica no par do
+ * monograma (D verde-feltro, R chiclete); o resto da palavra é tinta, com uma base clara
+ * no lugar da sombra. O D tem olhos (é o rosto da marca): pisca e espia o R.
  *
- * Movimento: as letras caem em sequência com mola, amassam ao tocar a mesa e estabilizam.
+ * Movimento: as letras descem em sequência e assentam com uma mola curta.
  * Depois, de tempos em tempos, uma onda passa pelas letras. Tocar na assinatura repete a onda.
  * Tudo em transform; com "reduzir movimento", a assinatura aparece parada.
  */
@@ -18,27 +19,24 @@ type Glyph = { d: string; c: string; s: string; key: string };
 const C = {
   feltro: ["var(--color-feltro)", "var(--color-feltro-d)"],
   chiclete: ["var(--color-chiclete)", "var(--color-chiclete-d)"],
-  gema: ["var(--color-gema)", "var(--color-gema-d)"],
-  ceu: ["var(--color-ceu)", "var(--color-ceu-d)"],
-  lilas: ["var(--color-lilas)", "var(--color-lilas-d)"],
-  menta: ["var(--color-menta)", "var(--color-menta-d)"],
+  tinta: ["var(--color-tinta)", "#c3cfc4"],
 } as const;
 const g = (key: string, d: string, [c, s]: readonly [string, string]): Glyph => ({ key, d, c, s });
 
 /** Letras depois do D, já na posição final (mesma geometria da assinatura original). */
 const GLYPHS: Glyph[] = [
-  g("e1", "M92 64H146A27 27 0 1 0 136.4 84.7", C.gema),
+  g("e1", "M92 64H146A27 27 0 1 0 136.4 84.7", C.tinta),
   g("R", `M176 91V9H194A21 21 0 0 1 194 51H176M190 51L218 91`, C.chiclete),
-  g("e2", "M246 64H300A27 27 0 1 0 290.4 84.7", C.ceu),
-  g("s", "M376 45C368 36 330 34 332 52C334 66 378 60 378 76C378 94 340 96 330 84", C.lilas),
-  g("e3", "M408 64H462A27 27 0 1 0 452.4 84.7", C.menta),
-  g("n", "M492 91V37M492 62A23 23 0 0 1 538 62V91", C.chiclete),
-  g("h", "M568 9V91M568 62A23 23 0 0 1 614 62V91", C.gema),
-  g("a", "M698 37V91M698 64A27 27 0 1 0 644 64A27 27 0 1 0 698 64", C.ceu),
+  g("e2", "M246 64H300A27 27 0 1 0 290.4 84.7", C.tinta),
+  g("s", "M376 45C368 36 330 34 332 52C334 66 378 60 378 76C378 94 340 96 330 84", C.tinta),
+  g("e3", "M408 64H462A27 27 0 1 0 452.4 84.7", C.tinta),
+  g("n", "M492 91V37M492 62A23 23 0 0 1 538 62V91", C.tinta),
+  g("h", "M568 9V91M568 62A23 23 0 0 1 614 62V91", C.tinta),
+  g("a", "M698 37V91M698 64A27 27 0 1 0 644 64A27 27 0 1 0 698 64", C.tinta),
 ];
 
-/** Quanto a base escura desce, como a sombra sólida das peças. */
-const DEPTH = 7;
+/** Quanto a base desce, como a sombra sólida das peças. */
+const DEPTH = 6;
 
 let playedThisSession = false;
 
@@ -61,8 +59,8 @@ export function Signature({ className = "", play = "once" }: { className?: strin
         letters.map((el, i) => {
           const a = animate(
             el,
-            { y: [-120, 0, -16, 0, -3, 0], scaleY: [1.35, 0.72, 1.08, 0.96, 1.01, 1], scaleX: [0.75, 1.2, 0.95, 1.03, 1, 1], opacity: [0, 1, 1, 1, 1, 1] },
-            { duration: 0.95, delay: i * 0.065, times: [0, 0.38, 0.58, 0.76, 0.9, 1], ease: ["easeIn", "easeOut", "easeIn", "easeOut", "easeInOut"] },
+            { y: [-44, 0, -4, 0], scaleY: [1.06, 0.95, 1.01, 1], scaleX: [0.97, 1.03, 1, 1], opacity: [0, 1, 1, 1] },
+            { duration: 0.8, delay: i * 0.055, times: [0, 0.5, 0.75, 1], ease: ["easeIn", "easeOut", "easeInOut"] },
           );
           running.push(a);
           return a;
@@ -72,7 +70,7 @@ export function Signature({ className = "", play = "once" }: { className?: strin
     const wave = () =>
       letters.forEach((el, i) => {
         running.push(
-          animate(el, { y: [0, -14, 0, -2, 0], scaleY: [1, 1.08, 0.9, 1.02, 1], scaleX: [1, 0.95, 1.08, 0.99, 1] }, { duration: 0.7, delay: i * 0.05, ease: "easeOut" }),
+          animate(el, { y: [0, -6, 0], scaleY: [1, 1.03, 1] }, { duration: 0.6, delay: i * 0.045, ease: "easeInOut" }),
         );
       });
 
@@ -91,7 +89,7 @@ export function Signature({ className = "", play = "once" }: { className?: strin
           window.setTimeout(() => alive && wave(), 500);
         }
         loop();
-      }, 7000);
+      }, 9000);
     };
 
     if (intro) {
@@ -137,8 +135,6 @@ export function SignatureSVG({ ref, className = "" }: { ref?: React.Ref<SVGSVGEl
           <g className="sg-eyes piece alive" style={{ ["--bd" as string]: "2.2s" }}>
             <rect className="eye" x={25} y={36} width={8} height={17} rx={4} fill="var(--color-tinta)" stroke="none" />
             <rect className="eye" x={39} y={36} width={8} height={17} rx={4} fill="var(--color-tinta)" stroke="none" />
-            <ellipse cx={25} cy={62} rx={5} ry={3} fill="var(--color-chiclete)" opacity={0.55} stroke="none" />
-            <ellipse cx={48} cy={62} rx={5} ry={3} fill="var(--color-chiclete)" opacity={0.55} stroke="none" />
           </g>
         </g>
         {GLYPHS.map((gl) => letter(gl.key, gl.d, gl.c, gl.s))}
