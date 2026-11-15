@@ -1,9 +1,10 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Piece, type Mood } from "@/brand/Piece";
-import { challengesFor, themeLabel, themesFor } from "@/content/library";
+import { themeLabel } from "@/content/library";
+import { useGameContent } from "@/content/useGameContent";
 import type { NotaChallenge } from "@/content/types";
 import type { Player } from "@/engine/core";
 import {
@@ -17,7 +18,7 @@ import {
   type NotaConfig,
   type NotaState,
 } from "@/engine/nota";
-import { EndActions, MatchFrame, SetupShell } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import {
   ChipGroup,
@@ -46,18 +47,24 @@ const LABEL = (d: number) => (d === 0 ? "Na mosca" : d === 1 ? "Quase" : d === 2
 export function NotaGame() {
   const [names, setNames] = usePlayerNames();
   const [config, setConfig] = useState<NotaConfig>(DEFAULT_NOTA_CONFIG);
-  const allThemes = useMemo(
-    () => ({
-      secreta: themesFor("nota", (c) => c.game === "nota" && c.kind === "secreta").map((t) => t.id),
-      avaliacao: themesFor("nota", (c) => c.game === "nota" && c.kind === "avaliacao").map((t) => t.id),
-    }),
-    [],
-  );
+  const content = useGameContent("nota");
+  const allThemes = useMemo(() => {
+    const ids = (kind: "secreta" | "avaliacao") => {
+      const used = new Set(content.challenges.filter((c) => c.kind === kind).map((c) => c.theme));
+      return content.themes.filter((t) => used.has(t.id)).map((t) => t.id);
+    };
+    return { secreta: ids("secreta"), avaliacao: ids("avaliacao") };
+  }, [content.challenges, content.themes]);
   const [themes, setThemes] = useState(allThemes);
+  useEffect(() => setThemes(allThemes), [allThemes]);
+  useEffect(() => {
+    if (content.settings) setConfig((c) => ({ ...c, rounds: content.settings!.defaultRounds }));
+  }, [content.settings]);
   const [match, setMatch] = useState<{ key: number; players: Player[]; pool: NotaChallenge[] } | null>(null);
 
-  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: challengesFor("nota", themes[config.mode]) });
+  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: content.challenges.filter((c) => themes[config.mode].includes(c.theme)) });
 
+  if (content.settings && !content.settings.enabled) return <Unavailable />;
   if (match) {
     return <NotaMatch key={match.key} config={config} players={match.players} pool={match.pool} onRematch={start} onSetup={() => setMatch(null)} />;
   }

@@ -3,7 +3,8 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Piece } from "@/brand/Piece";
-import { challengesFor, themeLabel, themesFor } from "@/content/library";
+import { themeLabel } from "@/content/library";
+import { useGameContent, useThemeIds } from "@/content/useGameContent";
 import type { InfiltradoChallenge } from "@/content/types";
 import type { Player } from "@/engine/core";
 import {
@@ -17,7 +18,7 @@ import {
   type InfiltradoConfig,
   type InfiltradoState,
 } from "@/engine/infiltrado";
-import { EndActions, MatchFrame, SetupShell } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import { ChipGroup, ErrorNote, HoldToReveal, PassPhone, PhaseStage, Podium, Progress, Scoreboard, Stepper, useEngine, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
@@ -25,11 +26,17 @@ import { useSound } from "@/ui/sound";
 export function InfiltradoGame() {
   const [names, setNames] = usePlayerNames();
   const [config, setConfig] = useState<InfiltradoConfig>(DEFAULT_INFILTRADO_CONFIG);
-  const all = themesFor("infiltrado").map((t) => t.id);
+  const content = useGameContent("infiltrado");
+  const all = useThemeIds(content.challenges, content.themes);
   const [themes, setThemes] = useState<string[]>(all);
+  useEffect(() => setThemes(all), [all]);
+  useEffect(() => {
+    if (content.settings) setConfig((c) => ({ ...c, rounds: content.settings!.defaultRounds }));
+  }, [content.settings]);
   const [match, setMatch] = useState<{ key: number; players: Player[]; pool: InfiltradoChallenge[] } | null>(null);
-  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: challengesFor("infiltrado", themes) });
+  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: content.challenges.filter((c) => themes.includes(c.theme)) });
 
+  if (content.settings && !content.settings.enabled) return <Unavailable />;
   if (match) return <InfiltradoMatch key={match.key} config={config} players={match.players} pool={match.pool} onRematch={start} onSetup={() => setMatch(null)} />;
 
   return (

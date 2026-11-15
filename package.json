@@ -8,7 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:migrate": "node --env-file=.env scripts/migrate.mjs"
+    "db:migrate": "node --env-file=.env scripts/migrate.mjs",
+    "db:seed": "node --env-file=.env scripts/seed-content.ts",
+    "admin:password": "node scripts/admin-password.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.1",

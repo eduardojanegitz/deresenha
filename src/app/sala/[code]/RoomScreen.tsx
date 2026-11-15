@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Piece } from "@/brand/Piece";
-import { themeLabel, themesFor } from "@/content/library";
+import { themeLabel } from "@/content/library";
+import { useGameContent } from "@/content/useGameContent";
 import { PIECE_KINDS, type PieceKind, type Player } from "@/engine/core";
 import { guessersOf } from "@/engine/nota";
 import { EndPhase, RevealPhase } from "@/games/nota/NotaGame";
@@ -197,14 +198,15 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
   const min = minPlayersFor(view);
   const [target, setTarget] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
-  const allThemes = useMemo(
-    () => ({
-      secreta: themesFor("nota", (c) => c.game === "nota" && c.kind === "secreta").map((t) => t.id),
-      avaliacao: themesFor("nota", (c) => c.game === "nota" && c.kind === "avaliacao").map((t) => t.id),
-      infiltrado: themesFor("infiltrado").map((t) => t.id),
-    }),
-    [],
-  );
+  const notaContent = useGameContent("nota");
+  const infContent = useGameContent("infiltrado");
+  const allThemes = useMemo(() => {
+    const ids = (kind: "secreta" | "avaliacao") => {
+      const used = new Set(notaContent.challenges.filter((c) => c.kind === kind).map((c) => c.theme));
+      return notaContent.themes.filter((t) => used.has(t.id)).map((t) => t.id);
+    };
+    return { secreta: ids("secreta"), avaliacao: ids("avaliacao"), infiltrado: infContent.themes.map((t) => t.id) };
+  }, [notaContent.challenges, notaContent.themes, infContent.themes]);
   const nc = view.config.nota;
   const ic = view.config.infiltrado;
   const gameThemes = view.game === "nota" ? allThemes[nc.mode] : allThemes.infiltrado;

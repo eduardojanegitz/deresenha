@@ -72,3 +72,17 @@ export function EndActions({ onRematch, onSetup }: { onRematch: () => void; onSe
     </div>
   );
 }
+
+/** Jogo desativado no painel administrativo. */
+export function Unavailable() {
+  return (
+    <div className="mx-auto grid max-w-[480px] justify-items-center gap-5 px-4 pt-10 pb-16 text-center">
+      <Piece kind="tijolo" mood="sleep" size={100} />
+      <h1>Jogo em pausa</h1>
+      <p className="muted max-w-[34ch]">Esse jogo está temporariamente fora do ar enquanto ajustamos o conteúdo. Que tal outro?</p>
+      <a href="/jogos" className="btn">
+        Ver os jogos
+      </a>
+    </div>
+  );
+}

@@ -1,8 +1,8 @@
 import { createHash, randomBytes, randomInt, randomUUID } from "node:crypto";
-import { challengesFor, themesFor } from "@/content/library";
 import { RuleError, type PieceKind } from "@/engine/core";
 import { createRoomState, joinRoom, reduceRoom, rejoinRoom, viewRoom, type RoomAction, type RoomState, type RoomView } from "@/rooms/room";
 import { CODE_ALPHABET, CODE_LENGTH } from "@/rooms/schema";
+import { contentFor } from "./content";
 import { db } from "./db";
 
 /**
@@ -22,8 +22,14 @@ export class RoomError extends Error {
 }
 
 const ROOM_TTL = "6 hours";
-const POOLS = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado") };
-const THEMES = { nota: themesFor("nota").map((t) => t.id), infiltrado: themesFor("infiltrado").map((t) => t.id) };
+/** Conteúdo publicado no painel (com cache curto e reserva embutida). */
+async function roomContent() {
+  const [nota, infiltrado] = await Promise.all([contentFor("nota"), contentFor("infiltrado")]);
+  return {
+    pools: { nota: nota.challenges, infiltrado: infiltrado.challenges },
+    themes: { nota: nota.themes.map((t) => t.id), infiltrado: infiltrado.themes.map((t) => t.id) },
+  };
+}
 /** Atualiza "visto por último" no máximo a cada tantos ms, para não escrever a cada consulta. */
 const HEARTBEAT_EVERY_MS = 8_000;
 
@@ -89,9 +95,10 @@ export async function createRoom(input: { nickname: string; piece: PieceKind }) 
   if (Math.random() < 0.1) await cleanupExpired().catch(() => {});
   const playerId = randomUUID();
   const token = newToken();
+  const { themes } = await roomContent();
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = newCode();
-    const state = createRoomState(code, { id: playerId, nickname: input.nickname.trim(), piece: input.piece }, Date.now(), THEMES);
+    const state = createRoomState(code, { id: playerId, nickname: input.nickname.trim(), piece: input.piece }, Date.now(), themes);
     try {
       // Sala e credencial do anfitrião nascem juntas, numa transação.
       await db().transaction((sql) => [
@@ -159,11 +166,11 @@ export async function act(code: string, token: string | null, clientActionId: st
     const dup = (await db()`select 1 from room_actions where room_id = ${row.id} and client_action_id = ${clientActionId}`) as unknown[];
     if (dup.length) return getView(code, token);
 
-    const presence = await presenceOf(row.id);
+    const [presence, content] = await Promise.all([presenceOf(row.id), roomContent()]);
     const now = Date.now();
     let next: RoomState;
     try {
-      next = reduceRoom(row.state, playerId, action, { now, rng: Math.random, pools: POOLS, presence });
+      next = reduceRoom(row.state, playerId, action, { now, rng: Math.random, pools: content.pools, presence });
     } catch (e) {
       ruleToRoomError(e);
     }

@@ -1,13 +1,14 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Piece } from "@/brand/Piece";
-import { challengesFor, themeLabel, themesFor } from "@/content/library";
+import { themeLabel } from "@/content/library";
+import { useGameContent, useThemeIds } from "@/content/useGameContent";
 import type { Difficulty, MimicaChallenge } from "@/content/types";
 import type { Player } from "@/engine/core";
 import { createMimica, currentActor, currentTeam, DEFAULT_MIMICA_CONFIG, reduceMimica, totalTurns, type MimicaAction, type MimicaConfig, type MimicaState } from "@/engine/mimica";
-import { EndActions, MatchFrame, SetupShell } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import { ChipGroup, ErrorNote, PassPhone, PhaseStage, Podium, Progress, Scoreboard, Stepper, Timer, useEngine, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
@@ -22,13 +23,19 @@ const TEAM_PIECE = ["bolota", "tijolo", "meialua", "pino"] as const;
 export function MimicaGame() {
   const [names, setNames] = usePlayerNames();
   const [config, setConfig] = useState<MimicaConfig>(DEFAULT_MIMICA_CONFIG);
-  const all = themesFor("mimica").map((t) => t.id);
+  const content = useGameContent("mimica");
+  const all = useThemeIds(content.challenges, content.themes);
   const [themes, setThemes] = useState<string[]>(all);
+  useEffect(() => setThemes(all), [all]);
+  useEffect(() => {
+    if (content.settings) setConfig((c) => ({ ...c, turnsPerTeam: Math.min(10, content.settings!.defaultRounds) }));
+  }, [content.settings]);
   const [match, setMatch] = useState<{ key: number; players: Player[]; pool: MimicaChallenge[] } | null>(null);
   const set = (p: Partial<MimicaConfig>) => setConfig((c) => ({ ...c, ...p }));
   const min = config.teams === "individual" ? 2 : config.teams * 2;
-  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: challengesFor("mimica", themes) });
+  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: content.challenges.filter((c) => themes.includes(c.theme)) });
 
+  if (content.settings && !content.settings.enabled) return <Unavailable />;
   if (match) return <MimicaMatch key={match.key} config={config} players={match.players} pool={match.pool} onRematch={start} onSetup={() => setMatch(null)} />;
 
   return (

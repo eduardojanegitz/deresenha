@@ -1,13 +1,14 @@
 "use client";
 
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Piece } from "@/brand/Piece";
-import { challengesFor, themeLabel, themesFor } from "@/content/library";
+import { themeLabel } from "@/content/library";
+import { useGameContent, useThemeIds } from "@/content/useGameContent";
 import type { RankingChallenge } from "@/content/types";
 import type { Player } from "@/engine/core";
 import { createRanking, currentItem, DEFAULT_RANKING_CONFIG, reduceRanking, type RankingAction, type RankingConfig, type RankingState } from "@/engine/ranking";
-import { EndActions, MatchFrame, SetupShell } from "@/ui/frame";
+import { EndActions, MatchFrame, SetupShell, Unavailable } from "@/ui/frame";
 import { IconLock, IconShare } from "@/ui/Icons";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
 import { ChipGroup, ErrorNote, PhaseStage, Progress, Stepper, useEngine } from "@/ui/play";
@@ -17,11 +18,17 @@ import { shareRankingImage } from "./shareImage";
 export function RankingGame() {
   const [names, setNames] = usePlayerNames();
   const [config, setConfig] = useState<RankingConfig>(DEFAULT_RANKING_CONFIG);
-  const all = themesFor("ranking").map((t) => t.id);
+  const content = useGameContent("ranking");
+  const all = useThemeIds(content.challenges, content.themes);
   const [themes, setThemes] = useState<string[]>(all);
+  useEffect(() => setThemes(all), [all]);
+  useEffect(() => {
+    if (content.settings) setConfig((c) => ({ ...c, rounds: content.settings!.defaultRounds }));
+  }, [content.settings]);
   const [match, setMatch] = useState<{ key: number; players: Player[]; pool: RankingChallenge[] } | null>(null);
-  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: challengesFor("ranking", themes) });
+  const start = () => setMatch({ key: Date.now(), players: toPlayers(names), pool: content.challenges.filter((c) => themes.includes(c.theme)) });
 
+  if (content.settings && !content.settings.enabled) return <Unavailable />;
   if (match) return <RankingMatch key={match.key} config={config} players={match.players} pool={match.pool} onRematch={start} onSetup={() => setMatch(null)} />;
 
   return (

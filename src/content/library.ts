@@ -31,7 +31,12 @@ export const THEMES: Theme[] = [
   { id: "objetos", label: "Objetos" },
 ];
 
-export const themeLabel = (id: string) => THEMES.find((t) => t.id === id)?.label ?? id;
+const extraLabels = new Map<string, string>();
+/** Registra rótulos de temas vindos do banco (criados no painel). */
+export function registerThemes(list: Theme[]) {
+  list.forEach((t) => extraLabels.set(t.id, t.label));
+}
+export const themeLabel = (id: string) => extraLabels.get(id) ?? THEMES.find((t) => t.id === id)?.label ?? id;
 
 const base = { status: "published" as const, lang: "pt-BR" as const };
 
