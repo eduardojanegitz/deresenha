@@ -37,13 +37,13 @@ export function SalaHome() {
   };
 
   return (
-    <div className="mx-auto grid max-w-[960px] gap-6 px-4 pt-2 pb-16 md:grid-cols-2 md:items-start">
+    <div className="mx-auto grid max-w-[960px] gap-6 px-4 pt-2 pb-16 md:grid-cols-2">
       <div className="md:col-span-2">
         <h1>Cada um no seu celular</h1>
         <p className="muted mt-2 max-w-[52ch]">Uma pessoa cria a sala e a turma entra pelo código, pelo link ou pelo QR Code. Sem cadastro. Dá para jogar Jogo da Nota, Infiltrado, Quiz Relâmpago e Você Prefere? assim.</p>
       </div>
 
-      <form onSubmit={join} className="card grid gap-4 rounded-[28px] p-5" noValidate>
+      <form onSubmit={join} className="card flex flex-col gap-4 rounded-[28px] p-5" noValidate>
         <div className="flex items-center gap-3">
           <Piece kind="bolota" mood="wow" size={48} />
           <h2>Entrar numa sala</h2>
@@ -66,15 +66,17 @@ export function SalaHome() {
             aria-describedby="code-err"
           />
         </label>
-        <p id="code-err" role="alert" className="text-[15px] font-semibold text-[var(--color-erro)]">
+        <p id="code-err" role="alert" className="text-[15px] font-semibold text-[var(--color-erro)] empty:hidden">
           {codeErr}
         </p>
-        <button className="btn" type="submit">
+        <p className="muted text-[15px]">Peça o código de 4 letras para quem criou a sala, ou abra o link ou o QR Code que a pessoa mandou.</p>
+        {/* O botão fica no pé do cartão, alinhado com o "Criar sala" ao lado. */}
+        <button className="btn mt-auto" type="submit">
           Entrar
         </button>
       </form>
 
-      <form onSubmit={create} className="card grid gap-4 rounded-[28px] p-5" noValidate>
+      <form onSubmit={create} className="card flex flex-col gap-4 rounded-[28px] p-5" noValidate>
         <div className="flex items-center gap-3">
           <Piece kind="tijolo" mood="happy" size={48} />
           <h2>Criar uma sala</h2>
@@ -84,10 +86,10 @@ export function SalaHome() {
           <input className="input" value={nickname} onChange={(e) => (setNickname(e.target.value), setErr(null))} maxLength={16} autoComplete="nickname" placeholder="Como a turma te chama" />
         </label>
         <PiecePicker value={piece} onChange={setPiece} />
-        <p role="alert" className="text-[15px] font-semibold text-[var(--color-erro)]">
+        <p role="alert" className="text-[15px] font-semibold text-[var(--color-erro)] empty:hidden">
           {err}
         </p>
-        <button className="btn btn-gema" type="submit" disabled={busy}>
+        <button className="btn btn-gema mt-auto" type="submit" disabled={busy}>
           {busy ? "Criando…" : "Criar sala"}
         </button>
       </form>
