@@ -7,6 +7,8 @@ function summary(c: Pick<ChallengeRow, "game" | "data">) {
   const d = c.data;
   if (c.game === "infiltrado") return `${d.major} × ${d.impostor}`;
   if (c.game === "voce-prefere") return `${d.a} ou ${d.b}`;
+  if (c.game === "quem-sou-eu") return String(d.name ?? "");
+  if (c.game === "quiz") return `${d.question} (${(d.options as string[])[Number(d.answer ?? 0)]})`;
   if (c.game === "ranking") return `${d.title} (${(d.items as string[]).length} itens)`;
   return String(d.text ?? "");
 }

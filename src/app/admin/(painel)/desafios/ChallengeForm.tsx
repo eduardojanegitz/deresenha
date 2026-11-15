@@ -11,7 +11,16 @@ const GAMES = [
   ["infiltrado", "Infiltrado"],
   ["ranking", "Ranking às Cegas"],
   ["voce-prefere", "Você Prefere?"],
+  ["quem-sou-eu", "Quem Sou Eu?"],
+  ["quiz", "Quiz Relâmpago"],
 ] as const;
+
+/** Alternativas do quiz com a correta primeiro, como o formulário espera. */
+function quizLines(d: Record<string, unknown>) {
+  const opts = Array.isArray(d.options) ? (d.options as string[]) : [];
+  const a = Number(d.answer ?? 0);
+  return [opts[a], ...opts.filter((_, i) => i !== a)].filter(Boolean).join("\n");
+}
 
 type Game = (typeof GAMES)[number][0];
 
@@ -113,6 +122,28 @@ export function ChallengeForm({ initial, themes, defaultGame }: { initial: Chall
             <input name="b" className="input" defaultValue={String(d.b ?? "")} maxLength={100} placeholder="Falar todos os idiomas" required />
           </label>
         </div>
+      )}
+
+      {game === "quem-sou-eu" && (
+        <label className={field}>
+          <span className="label">Identidade secreta</span>
+          <input name="name" className="input" defaultValue={String(d.name ?? "")} maxLength={40} placeholder="Bicho-preguiça" required />
+          <span className="muted text-[13px]">Algo que a turma conheça e dê para descobrir com perguntas de sim ou não.</span>
+        </label>
+      )}
+
+      {game === "quiz" && (
+        <>
+          <label className={field}>
+            <span className="label">Pergunta</span>
+            <input name="question" className="input" defaultValue={String(d.question ?? "")} maxLength={160} placeholder="Qual é o maior planeta do Sistema Solar?" required />
+          </label>
+          <label className={field}>
+            <span className="label">Alternativas, uma por linha (2 a 4)</span>
+            <textarea name="options" className="input h-auto min-h-36 py-3" defaultValue={quizLines(d)} rows={4} required />
+            <span className="muted text-[13px]">Escreva a correta na primeira linha. No jogo, a ordem é embaralhada.</span>
+          </label>
+        </>
       )}
 
       <div className="grid gap-4 md:grid-cols-3">

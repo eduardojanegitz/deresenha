@@ -38,7 +38,7 @@ export function Library() {
               >
                 <div className="relative grid aspect-[5/4] place-items-center" style={{ background: g.tint }}>
                   <span className={`absolute top-2.5 left-2.5 rounded-full px-2.5 py-[7px] text-xs leading-none font-bold ${ready ? "bg-[var(--color-feltro)] text-white" : "bg-white text-[var(--color-tinta)]"}`}>
-                    {ready ? "Jogue agora" : `Etapa ${g.stage}`}
+                    {ready ? "Jogue agora" : g.stage ? `Etapa ${g.stage}` : "Em breve"}
                   </span>
                   <Piece kind={g.piece} mood={ready ? "happy" : "sleep"} size={88} alive={ready} />
                 </div>

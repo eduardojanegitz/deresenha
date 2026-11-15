@@ -4,7 +4,7 @@ import { GAMES, getGame } from "@/games/registry";
 import { GameHost } from "./GameHost";
 
 export function generateStaticParams() {
-  return GAMES.filter((g) => g.status === "ready").map((g) => ({ id: g.id }));
+  return GAMES.filter((g) => g.status === "ready" && g.available.includes("shared")).map((g) => ({ id: g.id }));
 }
 export const dynamicParams = false;
 
@@ -14,6 +14,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function JogarPage({ params }: { params: Promise<{ id: string }> }) {
   const g = getGame((await params).id);
-  if (!g || g.status !== "ready") notFound();
+  if (!g || g.status !== "ready" || !g.available.includes("shared")) notFound();
   return <GameHost id={g.id} />;
 }

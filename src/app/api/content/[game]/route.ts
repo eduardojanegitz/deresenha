@@ -4,7 +4,7 @@ import { fail, json } from "@/server/http";
 
 export const runtime = "nodejs";
 
-const gameSchema = z.enum(["nota", "mimica", "infiltrado", "ranking", "voce-prefere"]);
+const gameSchema = z.enum(["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz"]);
 
 /** Conteúdo publicado de um jogo para o modo compartilhado (público: não há segredo aqui). */
 export async function GET(_req: Request, { params }: { params: Promise<{ game: string }> }) {

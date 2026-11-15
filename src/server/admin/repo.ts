@@ -5,9 +5,9 @@ import { db } from "@/server/db";
 
 /** Acesso ao banco usado só pelo painel. Toda escrita passa por validação com zod. */
 
-export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking", "voce-prefere"] as const;
+export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz"] as const;
 export type AdminGame = (typeof ADMIN_GAMES)[number];
-export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?" };
+export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?", "quem-sou-eu": "Quem Sou Eu?", quiz: "Quiz Relâmpago" };
 export const STATUS_LABEL: Record<PublishStatus, string> = { published: "Publicado", draft: "Rascunho", archived: "Arquivado" };
 export const DIFF_LABEL: Record<Difficulty, string> = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
 
@@ -92,6 +92,10 @@ export const challengeSchema = z
     items: z.string().optional(),
     a: z.string().optional(),
     b: z.string().optional(),
+    name: z.string().optional(),
+    question: z.string().optional(),
+    /** Quiz: a primeira linha é a alternativa correta. */
+    options: z.string().optional(),
   })
   .transform((v, ctx) => {
     const issue = (message: string) => {
@@ -143,6 +147,25 @@ export const challengeSchema = z
         if (!b.success) return issue(b.error.issues[0]!.message);
         if (a.data.toLowerCase() === b.data.toLowerCase()) return issue("As duas opções precisam ser diferentes.");
         data = { a: a.data, b: b.data };
+        break;
+      }
+      case "quem-sou-eu": {
+        const n = text(1, 40, "Identidade").safeParse(v.name ?? "");
+        if (!n.success) return issue(n.error.issues[0]!.message);
+        data = { name: n.data };
+        break;
+      }
+      case "quiz": {
+        const t = text(5, 160, "Pergunta").safeParse(v.question ?? "");
+        if (!t.success) return issue(t.error.issues[0]!.message);
+        const options = (v.options ?? "")
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (options.length < 2 || options.length > 4) return issue("Escreva de 2 a 4 alternativas, uma por linha. A primeira é a correta.");
+        if (options.some((o) => o.length > 60)) return issue("Cada alternativa pode ter até 60 caracteres.");
+        if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) return issue("Há alternativas repetidas.");
+        data = { question: t.data, options, answer: 0 };
         break;
       }
     }

@@ -15,6 +15,7 @@ const PIECE_OF: Record<CustomGame, "tijolo" | "capsula" | "pino" | "meialua" | "
   infiltrado: "pino",
   ranking: "meialua",
   prefere: "bolota",
+  quem: "bolota",
 };
 
 /** Temas da turma: criados aqui, guardados neste aparelho, usados nas partidas num celular só. */

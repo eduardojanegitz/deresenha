@@ -43,6 +43,13 @@ export function rowToChallenge(r: Row): Challenge | null {
       return Array.isArray(d.items) ? { ...base, game: "ranking", title: String(d.title ?? ""), items: d.items.map(String) } : null;
     case "voce-prefere":
       return { ...base, game: "voce-prefere", a: String(d.a ?? ""), b: String(d.b ?? "") };
+    case "quem-sou-eu":
+      return { ...base, game: "quem-sou-eu", name: String(d.name ?? "") };
+    case "quiz": {
+      const options = Array.isArray(d.options) ? d.options.map(String) : [];
+      const answer = Number(d.answer);
+      return options.length >= 2 && Number.isInteger(answer) && answer >= 0 && answer < options.length ? { ...base, game: "quiz", question: String(d.question ?? ""), options, answer } : null;
+    }
     default:
       return null;
   }

@@ -23,6 +23,8 @@ export interface GameDefinition {
   status: GameStatus;
   /** Etapa do plano em que chega, para jogos ainda não prontos. */
   stage?: number;
+  /** Por que um jogo planejado ainda não está disponível, quando não é só questão de etapa. */
+  pendingNote?: string;
   minutes: string;
   rules: string[];
   scoring?: string;
@@ -112,16 +114,21 @@ export const GAMES: GameDefinition[] = [
     id: "quem-sou-eu",
     name: "Quem Sou Eu?",
     tagline: "Todo mundo sabe quem você é. Menos você.",
-    description: "Uma identidade secreta e perguntas de sim ou não até descobrir quem você é.",
+    description: "O celular vai na sua testa, virado para a turma. Todo mundo vê a identidade secreta, menos você. Pergunte só o que se responde com sim ou não e descubra antes de acabarem as perguntas.",
     piece: "bolota",
     tint: "var(--color-chiclete-t)",
-    players: { min: 3, max: 10 },
-    modes: ["shared", "room"],
-    available: [],
-    status: "planned",
-    stage: 5,
-    minutes: "",
-    rules: [],
+    players: { min: 2, max: 12 },
+    modes: ["shared"],
+    available: ["shared"],
+    status: "ready",
+    minutes: "2 minutos por vez",
+    rules: [
+      "Na sua vez, segure o celular na testa com a tela para a turma, sem olhar.",
+      "Faça perguntas de sim ou não: “Eu sou um animal?”, “Eu caibo numa mochila?”.",
+      "A turma responde em voz alta e toca em Sim ou Não, o que conta as perguntas.",
+      "Chutou certo, a turma toca em Acertou. Errou ou desistiu, a vez passa.",
+    ],
+    scoring: "Acertar vale 1 ponto, mais 1 por pergunta que sobrou. Errar ou estourar o tempo não pontua.",
   },
   {
     id: "voce-prefere",
@@ -147,16 +154,21 @@ export const GAMES: GameDefinition[] = [
     id: "quiz",
     name: "Quiz Relâmpago",
     tagline: "Acertou rápido, pontuou mais.",
-    description: "Perguntas de múltipla escolha com pontos por acerto e velocidade.",
+    description: "Perguntas de múltipla escolha, cada um responde no próprio celular. Acertar dá pontos e acertar rápido dá mais. O servidor marca o tempo de cada um e só revela a resposta certa quando a pergunta fecha.",
     piece: "capsula",
     tint: "var(--color-ceu-t)",
-    players: { min: 2, max: 20 },
+    players: { min: 2, max: 12 },
     modes: ["room"],
-    available: [],
-    status: "planned",
-    stage: 5,
-    minutes: "",
-    rules: [],
+    available: ["room"],
+    status: "ready",
+    minutes: "15 segundos por pergunta",
+    rules: [
+      "Quem comanda cria uma sala e a turma entra pelo código.",
+      "A pergunta aparece em todos os celulares ao mesmo tempo, com o relógio correndo.",
+      "Cada um toca na sua resposta. Depois de tocar, não dá para mudar.",
+      "Quando todos respondem ou o tempo acaba, aparece a certa e quem marcou o quê.",
+    ],
+    scoring: "Acerto vale 100 pontos, mais até 100 pela rapidez. Errar ou não responder vale zero. A rapidez pode ser desligada.",
   },
   {
     id: "musica",
@@ -169,7 +181,7 @@ export const GAMES: GameDefinition[] = [
     modes: ["shared", "room"],
     available: [],
     status: "planned",
-    stage: 5,
+    pendingNote: "Para tocar trechos de música, o DeResenha precisa de áudios com licença de uso. Este jogo chega quando houver um catálogo autorizado.",
     minutes: "",
     rules: [],
   },

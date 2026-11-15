@@ -3,10 +3,11 @@ import { challengesFor, themesFor } from "@/content/library";
 import { RuleError, seeded } from "@/engine/core";
 import type { InfiltradoState } from "@/engine/infiltrado";
 import type { NotaState } from "@/engine/nota";
+import type { QuizState } from "@/engine/quiz";
 import { createRoomState, HOST_STALE_MS, joinRoom, reduceRoom, rejoinRoom, viewRoom, type RoomAction, type RoomCtx, type RoomState } from "./room";
 
-const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado") };
-const themes = { nota: themesFor("nota").map((t) => t.id), infiltrado: themesFor("infiltrado").map((t) => t.id) };
+const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado"), quiz: challengesFor("quiz") };
+const themes = { nota: themesFor("nota").map((t) => t.id), infiltrado: themesFor("infiltrado").map((t) => t.id), quiz: themesFor("quiz").map((t) => t.id) };
 const clock = 1_000_000;
 const IDS = ["a", "b", "c", "d", "e"];
 const presence = Object.fromEntries(IDS.map((id) => [id, clock]));
@@ -166,6 +167,51 @@ describe("Infiltrado em sala", () => {
     expect(inf(s).result?.caught).toBe(true);
     const after = viewRoom(s, "b", presence, clock);
     expect(after.match?.game === "infiltrado" && after.match.state.impostorId).toBe(imp);
+  });
+});
+
+describe("Quiz Relâmpago em sala", () => {
+  const quiz = (s: RoomState) => s.match!.state as QuizState;
+  const start = () => {
+    let s = act(lobby(3), "a", { type: "set-game", game: "quiz" });
+    s = act(s, "a", { type: "configure", quiz: { questions: 3, seconds: 10 } });
+    return act(s, "a", { type: "start" });
+  };
+
+  it("mede o tempo no servidor, esconde a certa e fecha quando todos respondem", () => {
+    let s = start();
+    expect(s.deadline).toBe(clock + 10_000 + 1_500);
+    const right = quiz(s).question.answer;
+    s = act(s, "b", { type: "game", action: { type: "answer", choice: right } }, { now: clock + 2_000 });
+    const peek = viewRoom(s, "c", presence, clock + 2_000);
+    expect(peek.match?.game === "quiz" && peek.match.state.question.answer).toBeNull();
+    expect(peek.match?.game === "quiz" && peek.match.state.answered).toEqual(["b"]);
+    expect(JSON.stringify(peek)).not.toContain('"ms":2000');
+    s = act(s, "c", { type: "game", action: { type: "answer", choice: (right + 1) % 4 } }, { now: clock + 3_000 });
+    s = act(s, "a", { type: "game", action: { type: "answer", choice: right } }, { now: clock + 5_000 });
+    expect(quiz(s).phase).toBe("reveal");
+    expect(s.deadline).toBeNull();
+    expect(quiz(s).gained).toEqual({ a: 150, b: 180, c: 0 });
+  });
+
+  it("o tempo esgotado fecha a pergunta e quem saiu não trava", () => {
+    let s = start();
+    expect(() => act(s, "b", { type: "time-up" })).toThrow(/ainda não acabou/);
+    s = act(s, "c", { type: "leave" });
+    s = act(s, "a", { type: "game", action: { type: "answer", choice: 0 } });
+    expect(quiz(s).phase).toBe("question");
+    s = act(s, "b", { type: "time-up" }, { now: s.deadline! });
+    expect(quiz(s).phase).toBe("reveal");
+    expect(() => act(s, "b", { type: "game", action: { type: "next" } })).toThrow(/Só quem comanda/);
+    s = act(s, "a", { type: "game", action: { type: "next" } }, { now: clock + 20_000 });
+    expect(quiz(s).index).toBe(2);
+    expect(s.deadline).toBe(clock + 20_000 + 11_500);
+  });
+
+  it("valida a configuração do quiz", () => {
+    const s = act(lobby(3), "a", { type: "set-game", game: "quiz" });
+    expect(() => act(s, "a", { type: "configure", quiz: { seconds: 7 } })).toThrow(/Tempo por pergunta/);
+    expect(() => act(s, "a", { type: "configure", quiz: { questions: 50 } })).toThrow(/3 a 20/);
   });
 });
 

@@ -24,10 +24,10 @@ export class RoomError extends Error {
 const ROOM_TTL = "6 hours";
 /** Conteúdo publicado no painel (com cache curto e reserva embutida). */
 async function roomContent() {
-  const [nota, infiltrado] = await Promise.all([contentFor("nota"), contentFor("infiltrado")]);
+  const [nota, infiltrado, quiz] = await Promise.all([contentFor("nota"), contentFor("infiltrado"), contentFor("quiz")]);
   return {
-    pools: { nota: nota.challenges, infiltrado: infiltrado.challenges },
-    themes: { nota: nota.themes.map((t) => t.id), infiltrado: infiltrado.themes.map((t) => t.id) },
+    pools: { nota: nota.challenges, infiltrado: infiltrado.challenges, quiz: quiz.challenges },
+    themes: { nota: nota.themes.map((t) => t.id), infiltrado: infiltrado.themes.map((t) => t.id), quiz: quiz.themes.map((t) => t.id) },
   };
 }
 /** Atualiza "visto por último" no máximo a cada tantos ms, para não escrever a cada consulta. */

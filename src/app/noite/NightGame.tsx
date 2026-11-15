@@ -11,11 +11,13 @@ import { DEFAULT_INFILTRADO_CONFIG, INFILTRADO_MIN } from "@/engine/infiltrado";
 import { DEFAULT_MIMICA_CONFIG } from "@/engine/mimica";
 import { DEFAULT_NOTA_CONFIG } from "@/engine/nota";
 import { DEFAULT_PREFERE_CONFIG } from "@/engine/prefere";
+import { DEFAULT_QUEM_CONFIG } from "@/engine/quem";
 import { DEFAULT_RANKING_CONFIG } from "@/engine/ranking";
 import { InfiltradoMatch } from "@/games/infiltrado/InfiltradoGame";
 import { MimicaMatch } from "@/games/mimica/MimicaGame";
 import { NotaMatch } from "@/games/nota/NotaGame";
 import { PrefereMatch } from "@/games/prefere/PrefereGame";
+import { QuemMatch } from "@/games/quem/QuemGame";
 import { RankingMatch } from "@/games/ranking/RankingGame";
 import { SetupShell } from "@/ui/frame";
 import { PlayersEditor, toPlayers, usePlayerNames } from "@/ui/players";
@@ -27,12 +29,13 @@ import { useSound } from "@/ui/sound";
  * Cada jogo vira 0–100 pontos relativos ao melhor da partida (pontuação normalizada),
  * para que jogos com números grandes não pesem mais que os outros.
  */
-type Stage = "nota" | "mimica" | "infiltrado" | "voce-prefere" | "ranking";
+type Stage = "nota" | "mimica" | "infiltrado" | "voce-prefere" | "quem-sou-eu" | "ranking";
 const STAGES: { id: Stage; name: string; piece: Player["piece"]; min: number; scored: boolean; note: string }[] = [
   { id: "nota", name: "Nota Secreta", piece: "tijolo", min: 3, scored: true, note: "Cada um pensa uma vez por rodada." },
   { id: "mimica", name: "Mímica", piece: "capsula", min: 2, scored: true, note: "Cada um por si." },
   { id: "infiltrado", name: "Infiltrado", piece: "pino", min: INFILTRADO_MIN, scored: true, note: "A partir de 4 pessoas." },
   { id: "voce-prefere", name: "Você Prefere?", piece: "bolota", min: 2, scored: true, note: "Ficar com a maioria pontua." },
+  { id: "quem-sou-eu", name: "Quem Sou Eu?", piece: "bolota", min: 2, scored: true, note: "Cada um adivinha uma vez." },
   { id: "ranking", name: "Ranking às Cegas", piece: "meialua", min: 1, scored: false, note: "Só para rir: não conta pontos." },
 ];
 const stageOf = (id: Stage) => STAGES.find((s) => s.id === id)!;
@@ -54,6 +57,7 @@ export function NightGame() {
   const mimica = useGameContent("mimica");
   const infiltrado = useGameContent("infiltrado");
   const prefere = useGameContent("voce-prefere");
+  const quem = useGameContent("quem-sou-eu");
   const ranking = useGameContent("ranking");
 
   const toggle = (id: Stage) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -143,6 +147,8 @@ export function NightGame() {
       return <InfiltradoMatch key={k} {...common} config={{ ...DEFAULT_INFILTRADO_CONFIG, rounds }} pool={by(infiltrado.challenges)} />;
     case "voce-prefere":
       return <PrefereMatch key={k} {...common} config={{ ...DEFAULT_PREFERE_CONFIG, rounds: rounds * 2, scoreMajority: true }} pool={by(prefere.challenges)} />;
+    case "quem-sou-eu":
+      return <QuemMatch key={k} {...common} config={{ ...DEFAULT_QUEM_CONFIG, rounds: 1 }} pool={by(quem.challenges)} />;
     case "ranking":
       return <RankingMatch key={k} {...common} config={{ ...DEFAULT_RANKING_CONFIG, rounds: Math.min(rounds, run.players.length) }} pool={by(ranking.challenges)} />;
   }

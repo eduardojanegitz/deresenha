@@ -13,12 +13,14 @@ import { EndPhase, RevealPhase } from "@/games/nota/NotaGame";
 import { useRoom } from "@/rooms/client";
 import { minPlayersFor, ROOM_GAMES, type RoomGame, type RoomMatchView, type RoomView } from "@/rooms/room";
 import { InfiltradoRoom } from "./InfiltradoRoom";
+import { QuizRoom } from "./QuizRoom";
 
 import { ChipGroup, ErrorNote, NumberPad, PhaseStage, Progress, PromptCard, Scoreboard, Sheet, Stepper, Toggle, useTone, Who } from "@/ui/play";
 import { useSound } from "@/ui/sound";
 import { PiecePicker } from "../PiecePicker";
 
-const GAME_NAME: Record<RoomGame, string> = { nota: "Jogo da Nota", infiltrado: "Infiltrado" };
+const GAME_NAME: Record<RoomGame, string> = { nota: "Jogo da Nota", infiltrado: "Infiltrado", quiz: "Quiz Relâmpago" };
+const GAME_PIECE: Record<RoomGame, PieceKind> = { nota: "tijolo", infiltrado: "pino", quiz: "capsula" };
 
 export type Room = ReturnType<typeof useRoom>;
 
@@ -35,7 +37,15 @@ export function RoomScreen({ code }: { code: string }) {
   return (
     <div className="mx-auto max-w-[560px] px-4 pt-1 pb-16">
       <ConnectionBanner conn={conn} />
-      {view.status === "lobby" || !view.match ? <Lobby view={view} room={room} /> : view.match.game === "nota" ? <NotaRoom view={view} room={room} /> : <InfiltradoRoom view={view} room={room} />}
+      {view.status === "lobby" || !view.match ? (
+        <Lobby view={view} room={room} />
+      ) : view.match.game === "nota" ? (
+        <NotaRoom view={view} room={room} />
+      ) : view.match.game === "quiz" ? (
+        <QuizRoom view={view} room={room} />
+      ) : (
+        <InfiltradoRoom view={view} room={room} />
+      )}
     </div>
   );
 }
@@ -200,16 +210,20 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
   const [leaving, setLeaving] = useState(false);
   const notaContent = useGameContent("nota");
   const infContent = useGameContent("infiltrado");
+  const quizContent = useGameContent("quiz");
   const allThemes = useMemo(() => {
     const ids = (kind: "secreta" | "avaliacao") => {
       const used = new Set(notaContent.challenges.filter((c) => c.kind === kind).map((c) => c.theme));
       return notaContent.themes.filter((t) => used.has(t.id)).map((t) => t.id);
     };
-    return { secreta: ids("secreta"), avaliacao: ids("avaliacao"), infiltrado: infContent.themes.map((t) => t.id) };
-  }, [notaContent.challenges, notaContent.themes, infContent.themes]);
+    // Temas da turma ficam no aparelho e não chegam ao servidor: em sala, só os oficiais.
+    const official = (list: { id: string }[]) => list.map((t) => t.id).filter((id) => !id.startsWith("meu-"));
+    return { secreta: official(ids("secreta").map((id) => ({ id }))), avaliacao: official(ids("avaliacao").map((id) => ({ id }))), infiltrado: official(infContent.themes), quiz: official(quizContent.themes) };
+  }, [notaContent.challenges, notaContent.themes, infContent.themes, quizContent.themes]);
   const nc = view.config.nota;
   const ic = view.config.infiltrado;
-  const gameThemes = view.game === "nota" ? allThemes[nc.mode] : allThemes.infiltrado;
+  const qc = view.config.quiz;
+  const gameThemes = view.game === "nota" ? allThemes[nc.mode] : view.game === "quiz" ? allThemes.quiz : allThemes.infiltrado;
   const current = view.themes[view.game];
   const selected = current.filter((t) => gameThemes.includes(t));
   const { play } = useSound();
@@ -266,11 +280,11 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
             <span className="label" id="jogo">
               Jogo
             </span>
-            <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-labelledby="jogo">
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="jogo">
               {ROOM_GAMES.map((g) => (
-                <button key={g} role="radio" aria-checked={view.game === g} onClick={() => room.act({ type: "set-game", game: g })} className={`grid justify-items-center gap-1.5 rounded-[20px] border-[2.5px] bg-[var(--card)] p-3 ${view.game === g ? "border-[var(--color-tinta)] shadow-[inset_0_0_0_1.5px_var(--color-tinta)]" : "border-[var(--line)]"}`}>
-                  <Piece kind={g === "nota" ? "tijolo" : "pino"} mood={view.game === g ? "happy" : "neutral"} size={40} />
-                  <b className="font-display text-base font-extrabold">{GAME_NAME[g]}</b>
+                <button key={g} role="radio" aria-checked={view.game === g} onClick={() => room.act({ type: "set-game", game: g })} className={`grid content-start justify-items-center gap-1.5 rounded-[20px] border-[2.5px] bg-[var(--card)] px-1.5 py-3 text-center ${view.game === g ? "border-[var(--color-tinta)] shadow-[inset_0_0_0_1.5px_var(--color-tinta)]" : "border-[var(--line)]"}`}>
+                  <Piece kind={GAME_PIECE[g]} mood={view.game === g ? "happy" : "neutral"} size={40} />
+                  <b className="font-display text-[15px] leading-tight font-extrabold">{GAME_NAME[g]}</b>
                 </button>
               ))}
             </div>
@@ -322,6 +336,14 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
                 </Toggle>
               )}
             </>
+          ) : view.game === "quiz" ? (
+            <>
+              <Stepper label="Perguntas" value={qc.questions} min={3} max={20} onChange={(questions) => room.act({ type: "configure", quiz: { questions } }, { quiet: true })} />
+              <ChipGroup label="Tempo por pergunta" options={[10, 15, 20, 30].map((v) => ({ value: v, label: `${v} s` }))} value={[qc.seconds]} onToggle={(seconds) => room.act({ type: "configure", quiz: { seconds } }, { quiet: true })} />
+              <Toggle checked={qc.speed} onChange={(speed) => room.act({ type: "configure", quiz: { speed } }, { quiet: true })}>
+                Responder mais rápido vale mais pontos
+              </Toggle>
+            </>
           ) : (
             <>
               <Stepper label="Rodadas" value={ic.rounds} min={1} max={10} onChange={(rounds) => room.act({ type: "configure", infiltrado: { rounds } }, { quiet: true })} />
@@ -337,11 +359,13 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
       ) : (
         <section className="grid gap-4">
           <div className="card grid gap-1 rounded-[22px] p-4 text-[15px]">
-            <b className="font-display text-lg font-extrabold">{view.game === "nota" ? (nc.mode === "secreta" ? "Nota Secreta" : "Avaliação") : "Infiltrado"}</b>
+            <b className="font-display text-lg font-extrabold">{view.game === "nota" ? (nc.mode === "secreta" ? "Nota Secreta" : "Avaliação") : GAME_NAME[view.game]}</b>
             <span className="muted">
               {view.game === "nota"
                 ? `${nc.rounds} ${nc.rounds === 1 ? "rodada" : "rodadas"}${nc.mode === "secreta" && nc.timerSec ? `, ${nc.timerSec} s por etapa` : ""}`
-                : `${ic.rounds} ${ic.rounds === 1 ? "rodada" : "rodadas"}, ${ic.hintRounds} ${ic.hintRounds === 1 ? "volta" : "voltas"} de dicas`}
+                : view.game === "quiz"
+                  ? `${qc.questions} perguntas, ${qc.seconds} s cada${qc.speed ? ", rapidez conta pontos" : ""}`
+                  : `${ic.rounds} ${ic.rounds === 1 ? "rodada" : "rodadas"}, ${ic.hintRounds} ${ic.hintRounds === 1 ? "volta" : "voltas"} de dicas`}
               . Temas: {selected.map(themeLabel).join(", ")}.
             </span>
           </div>

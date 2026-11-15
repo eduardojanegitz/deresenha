@@ -22,6 +22,16 @@ describe("validação de desafios do painel", () => {
     expect(challengeSchema.safeParse({ ...base, game: "jogo-falso", text: "x" }).success).toBe(false);
   });
 
+  it("valida Quem Sou Eu? e Quiz, com a correta na primeira linha", () => {
+    expect(challengeSchema.parse({ ...base, game: "quem-sou-eu", name: " Capivara " }).data).toEqual({ name: "Capivara" });
+    const q = challengeSchema.parse({ ...base, game: "quiz", question: "Quantas patas tem uma aranha?", options: "8\n6\n\n10" });
+    expect(q.data).toEqual({ question: "Quantas patas tem uma aranha?", options: ["8", "6", "10"], answer: 0 });
+    const err = (v: object) => challengeSchema.safeParse({ ...base, ...v }).error?.issues[0]?.message;
+    expect(err({ game: "quiz", question: "Pergunta válida?", options: "Só uma" })).toMatch(/2 a 4 alternativas/);
+    expect(err({ game: "quiz", question: "Pergunta válida?", options: "a\nA" })).toMatch(/repetidas/);
+    expect(err({ game: "quem-sou-eu", name: "" })).toMatch(/Identidade/);
+  });
+
   it("identificador de tema só com letras minúsculas, números e hífen", () => {
     expect(themeSchema.parse({ id: "Viagem-2026", label: "Viagem" }).id).toBe("viagem-2026");
     expect(themeSchema.safeParse({ id: "com espaço", label: "X Y" }).success).toBe(false);

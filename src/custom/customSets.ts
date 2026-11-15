@@ -6,7 +6,7 @@ import type { Challenge, Theme } from "@/content/types";
  * O formato já é o mesmo da tabela `challenges` (origin = "comunidade") para permitir,
  * no futuro, compartilhar, moderar e publicar.
  */
-export type CustomGame = "nota-secreta" | "nota-avaliacao" | "mimica" | "infiltrado" | "ranking" | "prefere";
+export type CustomGame = "nota-secreta" | "nota-avaliacao" | "mimica" | "infiltrado" | "ranking" | "prefere" | "quem";
 
 export interface CustomSet {
   id: string;
@@ -24,6 +24,7 @@ export const CUSTOM_GAME_LABEL: Record<CustomGame, string> = {
   infiltrado: "Infiltrado",
   ranking: "Ranking às Cegas",
   prefere: "Você Prefere?",
+  quem: "Quem Sou Eu?",
 };
 
 export const CUSTOM_HELP: Record<CustomGame, { placeholder: string; hint: string; min: number }> = {
@@ -33,6 +34,7 @@ export const CUSTOM_HELP: Record<CustomGame, { placeholder: string; hint: string
   infiltrado: { placeholder: "Praia / Piscina\nBar do Zé / Boteco da esquina", hint: "Duas palavras parecidas por linha, separadas por barra: a da maioria e a do infiltrado.", min: 1 },
   ranking: { placeholder: "Pastel da cantina\nMarmita da Duda\nCoxinha do posto\nPão de queijo da padaria\nSalgado da festa", hint: "O nome do tema vira o título do ranking. Um item por linha, de 5 a 20.", min: 5 },
   prefere: { placeholder: "Pagar a conta de todo mundo / Lavar a louça de todo mundo", hint: "Duas opções por linha, separadas por barra.", min: 1 },
+  quem: { placeholder: "Tia Cida\nO cachorro do Beto\nO professor de física", hint: "Uma identidade por linha: gente da turma, personagens, o que vocês quiserem.", min: 3 },
 };
 
 const clean = (lines: string[]) => lines.map((l) => l.trim().replace(/\s+/g, " ")).filter(Boolean);
@@ -87,11 +89,13 @@ export function toChallenges(s: CustomSet): Challenge[] {
         const p = pair(l);
         return p ? [{ ...base(s, i), game: "voce-prefere" as const, a: p[0], b: p[1] }] : [];
       });
+    case "quem":
+      return lines.map((name, i) => ({ ...base(s, i), game: "quem-sou-eu" as const, name }));
   }
 }
 
 /** Jogo do conteúdo a que um conjunto pertence. */
-export const contentGameOf = (g: CustomGame): Challenge["game"] => (g.startsWith("nota") ? "nota" : g === "prefere" ? "voce-prefere" : (g as Challenge["game"]));
+export const contentGameOf = (g: CustomGame): Challenge["game"] => (g.startsWith("nota") ? "nota" : g === "prefere" ? "voce-prefere" : g === "quem" ? "quem-sou-eu" : (g as Challenge["game"]));
 
 /* ---------- armazenamento no navegador ---------- */
 

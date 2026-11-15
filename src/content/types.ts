@@ -57,4 +57,18 @@ export interface PrefereChallenge extends BaseChallenge {
   b: string;
 }
 
-export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge | PrefereChallenge;
+/** Quem Sou Eu?: a identidade secreta de quem adivinha. */
+export interface QuemChallenge extends BaseChallenge {
+  game: "quem-sou-eu";
+  name: string;
+}
+
+/** Quiz Relâmpago: pergunta, de 2 a 4 alternativas e o índice da correta. */
+export interface QuizChallenge extends BaseChallenge {
+  game: "quiz";
+  question: string;
+  options: string[];
+  answer: number;
+}
+
+export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge | PrefereChallenge | QuemChallenge | QuizChallenge;

@@ -5,6 +5,8 @@ import type {
   MimicaChallenge,
   NotaChallenge,
   PrefereChallenge,
+  QuemChallenge,
+  QuizChallenge,
   RankingChallenge,
   Theme,
 } from "./types";
@@ -30,6 +32,12 @@ export const THEMES: Theme[] = [
   { id: "trabalho", label: "Trabalho e estudo" },
   { id: "animais", label: "Animais" },
   { id: "objetos", label: "Objetos" },
+  { id: "profissoes", label: "Profissões" },
+  { id: "personagens", label: "Lendas e personagens" },
+  { id: "conhecimentos-gerais", label: "Conhecimentos gerais" },
+  { id: "brasil", label: "Brasil" },
+  { id: "geografia", label: "Geografia" },
+  { id: "ciencia", label: "Ciência" },
 ];
 
 const extraLabels = new Map<string, string>();
@@ -291,7 +299,77 @@ const PREFERE = [
   ]),
 ];
 
-export const CHALLENGES: Challenge[] = [...NOTA_SECRETA, ...NOTA_AVALIACAO, ...MIMICA, ...INFILTRADO, ...RANKING, ...PREFERE];
+function quem(theme: string, names: string[], difficulty: Difficulty = "medio"): QuemChallenge[] {
+  return names.map((name, i) => ({ ...base, id: `quem-${theme}-${i + 1}`, game: "quem-sou-eu", theme, name, difficulty }));
+}
+
+const QUEM = [
+  ...quem("animais", ["Girafa", "Pinguim", "Elefante", "Tubarão", "Bicho-preguiça", "Tamanduá", "Capivara", "Polvo", "Camaleão", "Coruja", "Canguru", "Tartaruga"], "facil"),
+  ...quem("profissoes", ["Bombeiro", "Dentista", "Astronauta", "Padeiro", "Cabeleireiro", "Professor", "Piloto de avião", "Veterinário", "Garçom", "Detetive", "Salva-vidas", "Palhaço de circo"]),
+  ...quem("objetos", ["Guarda-chuva", "Escova de dentes", "Controle remoto", "Geladeira", "Chinelo", "Liquidificador", "Travesseiro", "Bicicleta", "Relógio", "Espelho"]),
+  ...quem("comida", ["Pastel", "Brigadeiro", "Coxinha", "Pão de queijo", "Feijoada", "Pipoca", "Açaí", "Pizza", "Melancia", "Ovo frito"], "facil"),
+  ...quem("personagens", ["Saci", "Curupira", "Iara", "Papai Noel", "Coelhinho da Páscoa", "Fada do Dente", "Mula sem cabeça", "Boitatá", "Vampiro", "Sereia", "Pirata", "Robô"]),
+  ...quem("lugares", ["Praia", "Hospital", "Aeroporto", "Biblioteca", "Padaria", "Cinema", "Academia", "Zoológico", "Escola", "Supermercado"]),
+];
+
+/** Cada linha: pergunta e alternativas, com a CORRETA primeiro (a ordem é embaralhada no jogo). */
+function quiz(theme: string, list: [string, string[]][], difficulty: Difficulty = "medio"): QuizChallenge[] {
+  return list.map(([question, options], i) => ({ ...base, id: `quiz-${theme}-${i + 1}`, game: "quiz", theme, question, options, answer: 0, difficulty }));
+}
+
+const QUIZ = [
+  ...quiz("brasil", [
+    ["Qual é a capital do Brasil?", ["Brasília", "Rio de Janeiro", "São Paulo", "Salvador"]],
+    ["Em que ano o Brasil declarou a independência?", ["1822", "1500", "1889", "1888"]],
+    ["Qual é o maior estado brasileiro em área?", ["Amazonas", "Pará", "Mato Grosso", "Minas Gerais"]],
+    ["Quantas Copas do Mundo a seleção masculina do Brasil já ganhou?", ["5", "4", "3", "6"]],
+    ["Qual bioma ocupa a maior parte do território brasileiro?", ["Amazônia", "Cerrado", "Caatinga", "Pantanal"]],
+    ["Qual cidade era a capital do Brasil antes de Brasília?", ["Rio de Janeiro", "Salvador", "São Paulo", "Belo Horizonte"]],
+    ["Qual é a moeda do Brasil desde 1994?", ["Real", "Cruzeiro", "Cruzado", "Mil-réis"]],
+    ["Em que ano foi assinada a Lei Áurea?", ["1888", "1822", "1889", "1850"]],
+    ["Em qual estado fica Manaus?", ["Amazonas", "Pará", "Roraima", "Acre"]],
+    ["Quantos estados tem o Brasil, sem contar o Distrito Federal?", ["26", "27", "25", "24"]],
+  ]),
+  ...quiz("geografia", [
+    ["Qual é o maior oceano do planeta?", ["Pacífico", "Atlântico", "Índico", "Ártico"]],
+    ["Qual é a capital da Argentina?", ["Buenos Aires", "Montevidéu", "Santiago", "Lima"]],
+    ["Em que continente fica o Egito?", ["África", "Ásia", "Europa", "Oceania"]],
+    ["Qual é o país mais populoso da América do Sul?", ["Brasil", "Argentina", "Colômbia", "Peru"]],
+    ["Qual é a capital do Japão?", ["Tóquio", "Quioto", "Osaka", "Seul"]],
+    ["Qual é o rio mais extenso que corre no Brasil?", ["Amazonas", "São Francisco", "Paraná", "Tocantins"]],
+    ["Qual é a montanha mais alta do mundo em relação ao nível do mar?", ["Everest", "K2", "Aconcágua", "Kilimanjaro"]],
+    ["Com qual país Portugal faz fronteira terrestre?", ["Espanha", "França", "Itália", "Marrocos"]],
+    ["Qual é o menor país do mundo em área?", ["Vaticano", "Mônaco", "San Marino", "Malta"]],
+  ]),
+  ...quiz("ciencia", [
+    ["Qual planeta é conhecido como planeta vermelho?", ["Marte", "Vênus", "Júpiter", "Mercúrio"]],
+    ["Qual é a fórmula química da água?", ["H₂O", "CO₂", "O₂", "NaCl"]],
+    ["Quantos ossos tem o corpo de um adulto?", ["206", "106", "306", "412"]],
+    ["Qual é o maior planeta do Sistema Solar?", ["Júpiter", "Saturno", "Netuno", "Terra"]],
+    ["Qual gás as plantas absorvem do ar na fotossíntese?", ["Gás carbônico", "Oxigênio", "Nitrogênio", "Hélio"]],
+    ["Qual órgão bombeia o sangue pelo corpo?", ["Coração", "Pulmão", "Fígado", "Rim"]],
+    ["A quantos graus a água ferve ao nível do mar?", ["100 °C", "90 °C", "80 °C", "120 °C"]],
+    ["Qual metal é líquido em temperatura ambiente?", ["Mercúrio", "Chumbo", "Alumínio", "Ferro"]],
+    ["Quantas patas tem uma aranha?", ["8", "6", "10", "4"]],
+  ]),
+  ...quiz(
+    "conhecimentos-gerais",
+    [
+      ["Quantos minutos tem uma hora e meia?", ["90", "60", "120", "100"]],
+      ["Quantos lados tem um hexágono?", ["6", "5", "7", "8"]],
+      ["Quem pintou a Mona Lisa?", ["Leonardo da Vinci", "Michelangelo", "Rafael", "Van Gogh"]],
+      ["Quantos jogadores de cada time ficam em campo numa partida de futebol?", ["11", "10", "12", "9"]],
+      ["Qual é o animal terrestre mais rápido?", ["Guepardo", "Leão", "Cavalo", "Antílope"]],
+      ["Que cor sai da mistura de tinta azul com amarela?", ["Verde", "Roxo", "Laranja", "Marrom"]],
+      ["Quantos dias tem um ano bissexto?", ["366", "365", "364", "360"]],
+      ["Em que país surgiram os Jogos Olímpicos da Antiguidade?", ["Grécia", "Itália", "Egito", "Turquia"]],
+      ["Quantas cordas tem um violão comum?", ["6", "4", "5", "7"]],
+    ],
+    "facil",
+  ),
+];
+
+export const CHALLENGES: Challenge[] = [...NOTA_SECRETA, ...NOTA_AVALIACAO, ...MIMICA, ...INFILTRADO, ...RANKING, ...PREFERE, ...QUEM, ...QUIZ];
 
 /** Desafios publicados de um jogo, opcionalmente filtrados por tema. */
 export function challengesFor<G extends Challenge["game"]>(game: G, themes?: readonly string[]) {
