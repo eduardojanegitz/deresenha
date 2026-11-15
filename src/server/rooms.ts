@@ -53,21 +53,47 @@ async function loadRoom(code: string): Promise<RoomRow> {
   return row;
 }
 
-async function presenceOf(roomId: string): Promise<Record<string, number>> {
-  const rows = (await db()`select id, extract(epoch from last_seen) * 1000 as seen from room_players where room_id = ${roomId}`) as { id: string; seen: string }[];
-  return Object.fromEntries(rows.map((r) => [r.id, Number(r.seen)]));
+interface Context {
+  row: RoomRow;
+  playerId: string;
+  presence: Record<string, number>;
+  /** A ação com este id já foi aplicada antes (envio repetido). */
+  dup: boolean;
 }
 
-async function authenticate(roomId: string, token: string | null): Promise<string> {
+/**
+ * Tudo que uma consulta ou ação precisa, numa ida só ao banco: a sala, quem está pedindo
+ * (pela credencial), a presença de todos e se a ação já foi aplicada. Atualiza o "visto
+ * por último" de quem pede no mesmo comando (só se o último sinal for antigo).
+ * Quando o celular já tem a versão atual, o estado não é enviado de volta.
+ */
+async function loadContext(code: string, token: string | null, opts: { knownVersion?: number; clientActionId?: string } = {}): Promise<Context> {
   if (!token) throw new RoomError(401, "no-token", "Entre na sala com um apelido para continuar.");
+  const known = opts.knownVersion ?? null;
   const rows = (await db()`
-    select id, extract(epoch from (now() - last_seen)) * 1000 as age
-    from room_players where room_id = ${roomId} and token_hash = ${hashToken(token)}`) as { id: string; age: string }[];
-  const me = rows[0];
-  if (!me) throw new RoomError(401, "bad-token", "Sua entrada nesta sala não vale mais. Entre de novo com um apelido.");
-  // Presença: só escreve se o último sinal for antigo, para não gravar a cada consulta.
-  if (Number(me.age) > HEARTBEAT_EVERY_MS) await db()`update room_players set last_seen = now() where id = ${me.id}`;
-  return me.id;
+    with r as (
+      select id, version, case when version = ${known}::int then null else state end as state, expires_at < now() as expired
+      from rooms where code = ${code}
+    ),
+    me as (
+      select p.id, p.last_seen from room_players p join r on p.room_id = r.id where p.token_hash = ${hashToken(token)}
+    ),
+    hb as (
+      update room_players set last_seen = now()
+      where id = (select id from me) and (select last_seen from me) < now() - ${`${HEARTBEAT_EVERY_MS} milliseconds`}::interval
+      returning id
+    )
+    select r.id, r.version, r.state, r.expired,
+      (select id from me) as me,
+      (select coalesce(json_object_agg(p.id, extract(epoch from p.last_seen) * 1000), '{}'::json) from room_players p where p.room_id = r.id) as presence,
+      exists (select 1 from room_actions a where a.room_id = r.id and a.client_action_id = ${opts.clientActionId ?? null}) as dup
+    from r`) as (RoomRow & { me: string | null; presence: Record<string, number | string>; dup: boolean })[];
+  const ctx = rows[0];
+  if (!ctx) throw new RoomError(404, "not-found", "Não encontramos uma sala com esse código. Confira as letras.");
+  if (ctx.expired) throw new RoomError(410, "expired", "Essa sala expirou. Crie uma nova para jogar.");
+  if (!ctx.me) throw new RoomError(401, "bad-token", "Sua entrada nesta sala não vale mais. Entre de novo com um apelido.");
+  const presence = Object.fromEntries(Object.entries(ctx.presence).map(([k, v]) => [k, Number(v)]));
+  return { row: { id: ctx.id, version: ctx.version, state: ctx.state, expired: false }, playerId: ctx.me, presence, dup: ctx.dup };
 }
 
 function ruleToRoomError(e: unknown): never {
@@ -153,21 +179,16 @@ export async function joinRoomByCode(code: string, input: { nickname: string; pi
 }
 
 export async function getView(code: string, token: string | null, knownVersion?: number): Promise<{ version: number; view: RoomView | null }> {
-  const row = await loadRoom(code);
-  const playerId = await authenticate(row.id, token);
+  const { row, playerId, presence } = await loadContext(code, token, { knownVersion });
   if (knownVersion === row.version) return { version: row.version, view: null };
-  const presence = await presenceOf(row.id);
   return { version: row.version, view: viewRoom(row.state, playerId, presence, Date.now()) };
 }
 
 export async function act(code: string, token: string | null, clientActionId: string, action: RoomAction) {
   for (let attempt = 0; attempt < 5; attempt++) {
-    const row = await loadRoom(code);
-    const playerId = await authenticate(row.id, token);
-    const dup = (await db()`select 1 from room_actions where room_id = ${row.id} and client_action_id = ${clientActionId}`) as unknown[];
-    if (dup.length) return getView(code, token);
-
-    const [presence, content] = await Promise.all([presenceOf(row.id), roomContent()]);
+    // Uma ida ao banco para ler (sala, credencial, presença, repetição) e outra para gravar.
+    const [{ row, playerId, presence, dup }, content] = await Promise.all([loadContext(code, token, { clientActionId }), roomContent()]);
+    if (dup) return { version: row.version, view: viewRoom(row.state, playerId, presence, Date.now()) };
     const now = Date.now();
     let next: RoomState;
     try {

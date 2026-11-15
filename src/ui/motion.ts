@@ -15,11 +15,13 @@ export const queda = (i: number): Transition => ({ type: "spring", stiffness: 42
 
 export const phaseVariants = (reduce: boolean): Variants =>
   reduce
-    ? { initial: { opacity: 0 }, animate: { opacity: 1, transition: { duration: 0.15 } }, exit: { opacity: 0, transition: { duration: 0.1 } } }
+    ? { initial: { opacity: 0 }, animate: { opacity: 1, transition: { duration: 0.12 } }, exit: { opacity: 0, transition: { duration: 0.06 } } }
     : {
-        initial: { opacity: 0, y: 16 },
-        animate: { opacity: 1, y: 0, transition: deslize },
-        exit: { opacity: 0, y: -8, transition: { duration: 0.16, ease: "easeIn" } },
+        // Troca de fase logo depois de um toque: a tela antiga sai rápido e a nova já chega
+        // quase inteira, para o toque parecer instantâneo.
+        initial: { opacity: 0, y: 10 },
+        animate: { opacity: 1, y: 0, transition: { duration: 0.22, ease: EASE_SOFT } },
+        exit: { opacity: 0, y: -6, transition: { duration: 0.08, ease: "easeIn" } },
       };
 
 /** Entrada escalonada de uma lista (usar com variants filhos). */

@@ -53,3 +53,9 @@ Adicionar um jogo: um motor em `src/engine`, uma entrada em `src/games/registry.
 | 5. Recursos adicionais | Feita: Você Prefere? (jogo novo), temas personalizados da turma (guardados no aparelho, para os cinco jogos), Noite de Jogos (sequência de jogos com pontuação normalizada de 0 a 100 por jogo, com ou sem classificação), histórico e estatísticas no aparelho, compartilhar o resultado como imagem. Depois: Quem Sou Eu? (modo compartilhado, com temas da turma e na Noite de Jogos) e Quiz Relâmpago (só no Modo Sala: tempo de resposta medido pelo servidor, alternativa correta enviada só depois que a pergunta fecha, pontos por acerto e rapidez). Ainda não: Adivinhe a Música (depende de um catálogo de áudios licenciados), compartilhar temas entre turmas. |
 
 Também ainda não existem: service worker (offline), contas de administrador individuais, contas de jogador (histórico e temas sincronizados entre aparelhos), Modo Sala para Mímica, Ranking e Você Prefere.
+
+## Velocidade
+
+- Em desenvolvimento (`npm run dev`), cada página é compilada na primeira visita, e isso leva de 1 a 3 segundos. Na versão de produção (`npm run build` e `npm start`), as páginas abrem em dezenas de milissegundos e os links são carregados antes do toque.
+- No Modo Sala, cada consulta lê sala, credencial, presença e repetição de ação numa ida só ao banco. Cada ação faz uma leitura e uma gravação. O tempo restante é a distância até o banco (Neon em us-east-2).
+- `vercel.json` fixa as funções na região `cle1` (Cleveland), a mesma do banco. Se o banco mudar de região, ajuste também esse valor.

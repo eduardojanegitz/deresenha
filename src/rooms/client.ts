@@ -117,7 +117,8 @@ export function useRoom(code: string) {
         handleError(res);
         if (res.status === 401 || res.status === 404 || res.status === 410) return;
       }
-      const base = document.visibilityState === "visible" ? 1200 : 5000;
+      // Consulta barata (sem estado quando nada mudou): dá para olhar mais vezes com a tela aberta.
+      const base = document.visibilityState === "visible" ? 700 : 5000;
       timer = window.setTimeout(tick, failures ? Math.min(5000, 1000 * 2 ** failures) : base);
     };
     tick();
