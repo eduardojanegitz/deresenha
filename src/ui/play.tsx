@@ -337,16 +337,22 @@ export function PassPhone({ player, title, note, cta, onReady }: { player: Playe
 
 /* ---------- placar e pódio ---------- */
 
-export function Scoreboard({ players, scores, unit = "" }: { players: Player[]; scores: Record<string, number>; unit?: string }) {
-  const rows = standings(players, scores);
-  const max = Math.max(1, ...rows.map((r) => r.score));
+/**
+ * Placar com posição. `skip` esconde as primeiras linhas (quem já está no pódio), mas a
+ * posição e a barra continuam contadas sobre a partida inteira: quem vem logo abaixo do
+ * pódio aparece como 4º, e empatados dividem a mesma posição.
+ */
+export function Scoreboard({ players, scores, unit = "", skip = 0 }: { players: Player[]; scores: Record<string, number>; unit?: string; skip?: number }) {
+  const all = standings(players, scores);
+  const max = Math.max(1, ...all.map((r) => r.score));
+  const rows = all.slice(skip);
   const reduce = useReducedMotion();
   return (
     <ol className="grid gap-2.5">
       {rows.map((r, k) => (
         <li key={r.player.id} className="card grid grid-cols-[28px_auto_1fr_auto] items-center gap-2.5 rounded-[20px] py-2 pr-4 pl-3">
           <span className="num text-xl text-[var(--fg-2)]">{r.position}</span>
-          <Piece kind={r.player.piece} mood={k === 0 && r.score > 0 ? "happy" : "neutral"} size={38} />
+          <Piece kind={r.player.piece} mood={r.position === 1 && r.score > 0 ? "happy" : "neutral"} size={38} />
           <div>
             <b>{r.player.name}</b>
             <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-[var(--color-sup-2)]">
@@ -371,6 +377,8 @@ export function Scoreboard({ players, scores, unit = "" }: { players: Player[]; 
 export function Podium({ entries, unit = "pts" }: { entries: { id: string; name: string; piece: Player["piece"]; score: number }[]; unit?: string }) {
   const sorted = [...entries].sort((a, b) => b.score - a.score);
   const reduce = useReducedMotion();
+  // Posição com empate: quem tem a mesma pontuação divide o lugar (como no placar).
+  const positionOf = (e: (typeof sorted)[number]) => sorted.findIndex((x) => x.score === e.score) + 1;
   const order = [sorted[1], sorted[0], sorted[2]];
   const H = [96, 132, 72];
   const C = ["var(--color-ceu)", "var(--color-gema)", "var(--color-chiclete)"];
@@ -385,7 +393,7 @@ export function Podium({ entries, unit = "pts" }: { entries: { id: string; name:
               animate={{ y: 0, opacity: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 16, delay: 0.25 + (2 - place[k]!) * 0.18 }}
             >
-              <Piece kind={p.piece} mood={k === 1 ? "happy" : "neutral"} size={k === 1 ? 72 : 54} alive />
+              <Piece kind={p.piece} mood={positionOf(p) === 1 && p.score > 0 ? "happy" : "neutral"} size={k === 1 ? 72 : 54} alive />
             </motion.div>
             <b className="font-display max-w-full truncate text-base font-extrabold">{p.name}</b>
             <span className="text-sm font-semibold text-[var(--fg-2)]">
@@ -398,7 +406,7 @@ export function Podium({ entries, unit = "pts" }: { entries: { id: string; name:
               animate={{ scaleY: 1 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.1 * k }}
             >
-              <span style={{ height: H[k], display: "grid", placeItems: "center" }}>{place[k]}</span>
+              <span style={{ height: H[k], display: "grid", placeItems: "center" }}>{positionOf(p)}</span>
             </motion.div>
           </div>
         ) : (

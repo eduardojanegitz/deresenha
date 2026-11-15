@@ -182,7 +182,7 @@ export function InfiltradoRoom({ view, room }: { view: RoomView; room: Room }) {
         <>
           <h1 className="text-center">{sorted[0]!.score === 0 ? "Ninguém pontuou" : sorted[1]?.score === sorted[0]!.score ? "Empate no topo!" : `${sorted[0]!.name} levou!`}</h1>
           <Podium entries={entries} />
-          {sorted.length > 3 && <Scoreboard players={s.players.filter((p) => sorted.slice(3).some((x) => x.id === p.id))} scores={s.scores} />}
+          {sorted.length > 3 && <Scoreboard players={s.players} scores={s.scores} skip={3} />}
           {amHost ? (
             <div className="mt-2 grid gap-2.5">
               <button className="btn btn-gema" onClick={() => room.act({ type: "back-to-lobby" })}>

@@ -225,7 +225,7 @@ export function InfiltradoMatch({ config, players, pool, onRematch, onSetup, nig
       <>
         <h1 className="text-center">{sorted[0]!.score === 0 ? "Ninguém pontuou" : sorted[1]?.score === sorted[0]!.score ? "Empate no topo!" : `${sorted[0]!.name} levou!`}</h1>
         <Podium entries={entries} />
-        {sorted.length > 3 && <Scoreboard players={s.players.filter((p) => sorted.slice(3).some((x) => x.id === p.id))} scores={s.scores} />}
+        {sorted.length > 3 && <Scoreboard players={s.players} scores={s.scores} skip={3} />}
         <EndActions onRematch={onRematch} onSetup={onSetup} night={night} result={{ game: "infiltrado", gameName: "Infiltrado", scored: true, unit: "pts", players: s.players.map((p) => ({ id: p.id, name: p.name, score: s.scores[p.id] ?? 0 })) }} />
       </>
     );
