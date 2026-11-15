@@ -13,14 +13,15 @@ import { EndPhase, RevealPhase } from "@/games/nota/NotaGame";
 import { useRoom } from "@/rooms/client";
 import { minPlayersFor, ROOM_GAMES, type RoomGame, type RoomMatchView, type RoomView } from "@/rooms/room";
 import { InfiltradoRoom } from "./InfiltradoRoom";
+import { PrefereRoom } from "./PrefereRoom";
 import { QuizRoom } from "./QuizRoom";
 
 import { ChipGroup, ErrorNote, NumberPad, PhaseStage, Progress, PromptCard, Scoreboard, Sheet, Stepper, Toggle, useTone, Who } from "@/ui/play";
 import { useSound } from "@/ui/sound";
 import { PiecePicker } from "../PiecePicker";
 
-const GAME_NAME: Record<RoomGame, string> = { nota: "Jogo da Nota", infiltrado: "Infiltrado", quiz: "Quiz Relâmpago" };
-const GAME_PIECE: Record<RoomGame, PieceKind> = { nota: "tijolo", infiltrado: "pino", quiz: "capsula" };
+const GAME_NAME: Record<RoomGame, string> = { nota: "Jogo da Nota", infiltrado: "Infiltrado", quiz: "Quiz Relâmpago", "voce-prefere": "Você Prefere?" };
+const GAME_PIECE: Record<RoomGame, PieceKind> = { nota: "tijolo", infiltrado: "pino", quiz: "capsula", "voce-prefere": "bolota" };
 
 export type Room = ReturnType<typeof useRoom>;
 
@@ -43,6 +44,8 @@ export function RoomScreen({ code }: { code: string }) {
         <NotaRoom view={view} room={room} />
       ) : view.match.game === "quiz" ? (
         <QuizRoom view={view} room={room} />
+      ) : view.match.game === "voce-prefere" ? (
+        <PrefereRoom view={view} room={room} />
       ) : (
         <InfiltradoRoom view={view} room={room} />
       )}
@@ -211,6 +214,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
   const notaContent = useGameContent("nota");
   const infContent = useGameContent("infiltrado");
   const quizContent = useGameContent("quiz");
+  const prefContent = useGameContent("voce-prefere");
   const allThemes = useMemo(() => {
     const ids = (kind: "secreta" | "avaliacao") => {
       const used = new Set(notaContent.challenges.filter((c) => c.kind === kind).map((c) => c.theme));
@@ -218,12 +222,13 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
     };
     // Temas da turma ficam no aparelho e não chegam ao servidor: em sala, só os oficiais.
     const official = (list: { id: string }[]) => list.map((t) => t.id).filter((id) => !id.startsWith("meu-"));
-    return { secreta: official(ids("secreta").map((id) => ({ id }))), avaliacao: official(ids("avaliacao").map((id) => ({ id }))), infiltrado: official(infContent.themes), quiz: official(quizContent.themes) };
-  }, [notaContent.challenges, notaContent.themes, infContent.themes, quizContent.themes]);
+    return { secreta: official(ids("secreta").map((id) => ({ id }))), avaliacao: official(ids("avaliacao").map((id) => ({ id }))), infiltrado: official(infContent.themes), quiz: official(quizContent.themes), "voce-prefere": official(prefContent.themes) };
+  }, [notaContent.challenges, notaContent.themes, infContent.themes, quizContent.themes, prefContent.themes]);
   const nc = view.config.nota;
   const ic = view.config.infiltrado;
   const qc = view.config.quiz;
-  const gameThemes = view.game === "nota" ? allThemes[nc.mode] : view.game === "quiz" ? allThemes.quiz : allThemes.infiltrado;
+  const pc = view.config.prefere;
+  const gameThemes = view.game === "nota" ? allThemes[nc.mode] : allThemes[view.game];
   const current = view.themes[view.game];
   const selected = current.filter((t) => gameThemes.includes(t));
   const { play } = useSound();
@@ -239,7 +244,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
     <div className="grid gap-6">
       <div>
         <h1>Lobby</h1>
-        <p className="muted mt-1">{GAME_NAME[view.game]}. {amHost ? "Você comanda a sala." : `${host?.nickname ?? "Alguém"} comanda a sala.`}</p>
+        <p className="muted mt-1">{GAME_NAME[view.game]}{GAME_NAME[view.game].endsWith("?") ? "" : "."} {amHost ? "Você comanda a sala." : `${host?.nickname ?? "Alguém"} comanda a sala.`}</p>
       </div>
       <ShareCard code={view.code} />
 
@@ -280,7 +285,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
             <span className="label" id="jogo">
               Jogo
             </span>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="jogo">
+            <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-labelledby="jogo">
               {ROOM_GAMES.map((g) => (
                 <button key={g} role="radio" aria-checked={view.game === g} onClick={() => room.act({ type: "set-game", game: g })} className={`grid content-start justify-items-center gap-1.5 rounded-[20px] border-[2.5px] bg-[var(--card)] px-1.5 py-3 text-center ${view.game === g ? "border-[var(--color-tinta)] shadow-[inset_0_0_0_1.5px_var(--color-tinta)]" : "border-[var(--line)]"}`}>
                   <Piece kind={GAME_PIECE[g]} mood={view.game === g ? "happy" : "neutral"} size={40} />
@@ -336,6 +341,13 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
                 </Toggle>
               )}
             </>
+          ) : view.game === "voce-prefere" ? (
+            <>
+              <Stepper label="Dilemas" value={pc.rounds} min={1} max={20} onChange={(rounds) => room.act({ type: "configure", prefere: { rounds } }, { quiet: true })} />
+              <Toggle checked={pc.scoreMajority} onChange={(scoreMajority) => room.act({ type: "configure", prefere: { scoreMajority } }, { quiet: true })}>
+                Dar 1 ponto para quem ficar com a maioria
+              </Toggle>
+            </>
           ) : view.game === "quiz" ? (
             <>
               <Stepper label="Perguntas" value={qc.questions} min={3} max={20} onChange={(questions) => room.act({ type: "configure", quiz: { questions } }, { quiet: true })} />
@@ -365,6 +377,8 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
                 ? `${nc.rounds} ${nc.rounds === 1 ? "rodada" : "rodadas"}${nc.mode === "secreta" && nc.timerSec ? `, ${nc.timerSec} s por etapa` : ""}`
                 : view.game === "quiz"
                   ? `${qc.questions} perguntas, ${qc.seconds} s cada${qc.speed ? ", rapidez conta pontos" : ""}`
+                  : view.game === "voce-prefere"
+                    ? `${pc.rounds} ${pc.rounds === 1 ? "dilema" : "dilemas"}${pc.scoreMajority ? ", ficar com a maioria pontua" : ""}`
                   : `${ic.rounds} ${ic.rounds === 1 ? "rodada" : "rodadas"}, ${ic.hintRounds} ${ic.hintRounds === 1 ? "volta" : "voltas"} de dicas`}
               . Temas: {selected.map(themeLabel).join(", ")}.
             </span>

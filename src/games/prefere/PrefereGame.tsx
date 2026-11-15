@@ -132,20 +132,48 @@ export function PrefereMatch({ config, players, pool, onRematch, onSetup, night 
       );
       break;
     }
-    case "reveal": {
-      const total = t.a + t.b || 1;
-      const verdict = t.majority === null ? "Empate. A turma está rachada ao meio." : t.a === 0 || t.b === 0 ? "Unanimidade!" : `A maioria prefere ${t.majority === "a" ? "a primeira" : "a segunda"}.`;
-      const side = (c: PrefereChoice) => s.players.filter((p) => s.votes[p.id] === c);
+    case "reveal":
       body = (
         <div className="grid gap-5">
-          <h1 className="text-center text-[clamp(26px,7vw,36px)]">{verdict}</h1>
-          {(["a", "b"] as const).map((c, i) => {
+          <PrefereSplit dilemma={s.dilemma} votes={s.votes} players={s.players} />
+          <button className="btn btn-gema" onClick={() => dispatch({ type: "next" }) && play(s.round >= s.config.rounds ? "win" : "tap")}>
+            {s.round >= s.config.rounds ? "Ver resumo" : "Próximo dilema"}
+          </button>
+        </div>
+      );
+      break;
+    case "end":
+      body = <PrefereEnd s={s} actions={<EndActions onRematch={onRematch} onSetup={onSetup} night={night} result={{ game: "voce-prefere", gameName: "Você Prefere?", scored: s.config.scoreMajority, unit: "pts", players: s.players.map((p) => ({ id: p.id, name: p.name, score: s.scores[p.id] ?? 0 })) }} />} />;
+      break;
+  }
+
+  return (
+    <MatchFrame onExit={onSetup}>
+      <PhaseStage phaseKey={`${s.round}-${s.phase}`}>
+        {body}
+        <ErrorNote message={error} />
+      </PhaseStage>
+    </MatchFrame>
+  );
+}
+
+/** Revelação: as duas opções, quantos foram para cada lado e quem. */
+export function PrefereSplit({ dilemma, votes, players }: { dilemma: { a: string; b: string }; votes: Record<string, PrefereChoice>; players: Player[] }) {
+  const reduce = useReducedMotion();
+  const t = tallyPrefere(votes);
+  const total = t.a + t.b || 1;
+  const verdict = t.majority === null ? "Empate. A turma está rachada ao meio." : t.a === 0 || t.b === 0 ? "Unanimidade!" : `A maioria prefere ${t.majority === "a" ? "a primeira" : "a segunda"}.`;
+  const side = (c: PrefereChoice) => players.filter((p) => votes[p.id] === c);
+  return (
+    <>
+      <h1 className="text-center text-[clamp(26px,7vw,36px)]">{verdict}</h1>
+      {(["a", "b"] as const).map((c, i) => {
             const n = c === "a" ? t.a : t.b;
             const win = t.majority === c;
             return (
               <div key={c} className="grid gap-2">
                 <div className="flex items-baseline justify-between gap-3">
-                  <b className="font-display text-lg leading-snug font-extrabold">{c === "a" ? s.dilemma.a : s.dilemma.b}</b>
+                  <b className="font-display text-lg leading-snug font-extrabold">{c === "a" ? dilemma.a : dilemma.b}</b>
                   <span className={`num text-3xl ${win ? "text-[var(--color-gema)]" : ""}`}>{n}</span>
                 </div>
                 <div className="h-4 overflow-hidden rounded-full bg-[var(--color-noite-3)]">
@@ -168,18 +196,17 @@ export function PrefereMatch({ config, players, pool, onRematch, onSetup, night 
               </div>
             );
           })}
-          <button className="btn btn-gema" onClick={() => dispatch({ type: "next" }) && play(s.round >= s.config.rounds ? "win" : "tap")}>
-            {s.round >= s.config.rounds ? "Ver resumo" : "Próximo dilema"}
-          </button>
-        </div>
-      );
-      break;
-    }
-    case "end": {
+    </>
+  );
+}
+
+/** Resumo final: pódio de quem ficou com a maioria (ou pontos) e quem é do contra. */
+export function PrefereEnd({ s, actions }: { s: Pick<PrefereState, "players" | "config" | "scores" | "withMajority">; actions: React.ReactNode }) {
+  const P = (id: string) => s.players.find((p) => p.id === id)!;
       const entries = s.players.map((p) => ({ id: p.id, name: p.name, piece: p.piece, score: s.config.scoreMajority ? (s.scores[p.id] ?? 0) : (s.withMajority[p.id] ?? 0) }));
       const sorted = [...entries].sort((a, b) => b.score - a.score);
       const contra = sorted[sorted.length - 1]!;
-      body = (
+      return (
         <>
           <h1 className="text-center">{s.config.scoreMajority ? (sorted[0]!.score === 0 ? "Ninguém pontuou" : sorted[1]?.score === sorted[0]!.score ? "Empate no topo!" : `${sorted[0]!.name} levou!`) : "Quem pensa como a turma"}</h1>
           <Podium entries={entries} unit={s.config.scoreMajority ? "pts" : "com a maioria"} />
@@ -192,29 +219,12 @@ export function PrefereMatch({ config, players, pool, onRematch, onSetup, night 
               </div>
             </div>
           )}
-          <EndActions
-            onRematch={onRematch}
-            onSetup={onSetup}
-            night={night}
-            result={{ game: "voce-prefere", gameName: "Você Prefere?", scored: s.config.scoreMajority, unit: "pts", players: s.players.map((p) => ({ id: p.id, name: p.name, score: s.scores[p.id] ?? 0 })) }}
-          />
+          {actions}
         </>
       );
-      break;
-    }
-  }
-
-  return (
-    <MatchFrame onExit={onSetup}>
-      <PhaseStage phaseKey={`${s.round}-${s.phase}`}>
-        {body}
-        <ErrorNote message={error} />
-      </PhaseStage>
-    </MatchFrame>
-  );
 }
 
-function Dilemma({ a, b }: { a: string; b: string }) {
+export function Dilemma({ a, b }: { a: string; b: string }) {
   const reduce = useReducedMotion();
   return (
     <div className="relative grid gap-3">

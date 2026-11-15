@@ -30,7 +30,8 @@ export interface PrefereState {
   used: string[];
 }
 
-export type PrefereAction = { type: "swap" } | { type: "open-vote" } | { type: "vote"; playerId: string; choice: PrefereChoice } | { type: "reveal" } | { type: "next" };
+/** `force` (Modo Sala): revela com quem já escolheu, sem esperar quem saiu ou sumiu. */
+export type PrefereAction = { type: "swap" } | { type: "open-vote" } | { type: "vote"; playerId: string; choice: PrefereChoice } | { type: "reveal"; force?: boolean } | { type: "next" };
 
 function begin(s: PrefereState, pool: readonly PrefereChallenge[], rng: Rng): PrefereState {
   const d = drawFresh(rng, pool, s.used, s.dilemma?.id);
@@ -67,7 +68,7 @@ export function tallyPrefere(votes: Record<string, PrefereChoice>) {
 export function reducePrefere(s: PrefereState, act: PrefereAction, pool: readonly PrefereChallenge[], rng: Rng): PrefereState {
   switch (act.type) {
     case "swap": {
-      assertRule(s.phase === "question", "phase", "Só dá para trocar antes da votação.");
+      assertRule(s.phase === "question" || (s.phase === "vote" && Object.keys(s.votes).length === 0), "phase", "Só dá para trocar antes de alguém escolher.");
       const d = drawFresh(rng, pool, s.used, s.dilemma.id);
       return { ...s, dilemma: d.item, used: d.used };
     }
@@ -82,7 +83,8 @@ export function reducePrefere(s: PrefereState, act: PrefereAction, pool: readonl
       return { ...s, votes: { ...s.votes, [act.playerId]: act.choice } };
     case "reveal": {
       assertRule(s.phase === "vote", "phase", "Não há votação aberta.");
-      assertRule(Object.keys(s.votes).length === s.players.length, "pending", "Ainda falta gente escolher.");
+      const n = Object.keys(s.votes).length;
+      assertRule(act.force ? n > 0 : n === s.players.length, "pending", act.force ? "Ninguém escolheu ainda." : "Ainda falta gente escolher.");
       const t = tallyPrefere(s.votes);
       const scores = { ...s.scores };
       const withMajority = { ...s.withMajority };
@@ -100,4 +102,17 @@ export function reducePrefere(s: PrefereState, act: PrefereAction, pool: readonl
       if (s.round >= s.config.rounds) return { ...s, phase: "end" };
       return begin(s, pool, rng);
   }
+}
+
+/** O que cada participante recebe em sala. Antes da revelação: só quem já escolheu e a própria escolha. */
+export interface PrefereView extends Omit<PrefereState, "votes" | "used"> {
+  voted: string[];
+  myVote: PrefereChoice | null;
+  votes: Record<string, PrefereChoice> | null;
+}
+
+export function viewPrefereFor(s: PrefereState, viewerId: string): PrefereView {
+  const { votes, used: _u, ...rest } = s;
+  const open = s.phase === "question" || s.phase === "vote";
+  return { ...rest, voted: Object.keys(votes), myVote: votes[viewerId] ?? null, votes: open ? null : votes };
 }

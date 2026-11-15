@@ -3,11 +3,13 @@ import { challengesFor, themesFor } from "@/content/library";
 import { RuleError, seeded } from "@/engine/core";
 import type { InfiltradoState } from "@/engine/infiltrado";
 import type { NotaState } from "@/engine/nota";
+import type { PrefereState } from "@/engine/prefere";
 import type { QuizState } from "@/engine/quiz";
 import { createRoomState, HOST_STALE_MS, joinRoom, reduceRoom, rejoinRoom, viewRoom, type RoomAction, type RoomCtx, type RoomState } from "./room";
 
-const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado"), quiz: challengesFor("quiz") };
-const themes = { nota: themesFor("nota").map((t) => t.id), infiltrado: themesFor("infiltrado").map((t) => t.id), quiz: themesFor("quiz").map((t) => t.id) };
+const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado"), quiz: challengesFor("quiz"), prefere: challengesFor("voce-prefere") };
+const ids = (g: Parameters<typeof themesFor>[0]) => themesFor(g).map((t) => t.id);
+const themes = { nota: ids("nota"), infiltrado: ids("infiltrado"), quiz: ids("quiz"), "voce-prefere": ids("voce-prefere") };
 const clock = 1_000_000;
 const IDS = ["a", "b", "c", "d", "e"];
 const presence = Object.fromEntries(IDS.map((id) => [id, clock]));
@@ -212,6 +214,40 @@ describe("Quiz Relâmpago em sala", () => {
     const s = act(lobby(3), "a", { type: "set-game", game: "quiz" });
     expect(() => act(s, "a", { type: "configure", quiz: { seconds: 7 } })).toThrow(/Tempo por pergunta/);
     expect(() => act(s, "a", { type: "configure", quiz: { questions: 50 } })).toThrow(/3 a 20/);
+  });
+});
+
+describe("Você Prefere? em sala", () => {
+  const pref = (s: RoomState) => s.match!.state as PrefereState;
+  const start = () => act(act(lobby(3), "a", { type: "set-game", game: "voce-prefere" }), "a", { type: "start" });
+
+  it("abre a votação junto com o dilema e esconde as escolhas até todos escolherem", () => {
+    let s = start();
+    expect(pref(s).phase).toBe("vote");
+    s = act(s, "b", { type: "game", action: { type: "choose", choice: "a" } });
+    s = act(s, "b", { type: "game", action: { type: "choose", choice: "b" } });
+    const peek = viewRoom(s, "c", presence, clock);
+    expect(peek.match?.game === "voce-prefere" && peek.match.state.votes).toBeNull();
+    expect(peek.match?.game === "voce-prefere" && peek.match.state.voted).toEqual(["b"]);
+    expect(JSON.stringify(peek.match)).not.toContain('"b":"b"');
+    s = act(s, "a", { type: "game", action: { type: "choose", choice: "b" } });
+    s = act(s, "c", { type: "game", action: { type: "choose", choice: "a" } });
+    expect(pref(s).phase).toBe("reveal");
+    expect(pref(s).history[0]).toMatchObject({ countA: 1, countB: 2 });
+  });
+
+  it("só o anfitrião troca, revela e avança; quem saiu não trava", () => {
+    let s = start();
+    expect(() => act(s, "b", { type: "game", action: { type: "swap" } })).toThrow(/Só quem comanda/);
+    s = act(s, "a", { type: "game", action: { type: "swap" } });
+    s = act(s, "c", { type: "leave" });
+    s = act(s, "a", { type: "game", action: { type: "choose", choice: "a" } });
+    expect(pref(s).phase).toBe("vote");
+    s = act(s, "b", { type: "game", action: { type: "choose", choice: "a" } });
+    expect(pref(s).phase).toBe("reveal");
+    s = act(s, "a", { type: "game", action: { type: "next" } });
+    expect(pref(s).phase).toBe("vote");
+    expect(pref(s).round).toBe(2);
   });
 });
 

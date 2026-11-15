@@ -139,7 +139,7 @@ export const GAMES: GameDefinition[] = [
     tint: "var(--color-chiclete-t)",
     players: { min: 2, max: 12 },
     modes: ["shared", "room"],
-    available: ["shared"],
+    available: ["shared", "room"],
     status: "ready",
     minutes: "1 minuto por dilema",
     rules: [

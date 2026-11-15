@@ -4,9 +4,9 @@
  * (todo mundo respondeu, tempo acabou) e o que cada participante pode ver.
  * O servidor só carrega/salva este estado; nenhuma regra mora no cliente ou no banco.
  *
- * Cada jogo jogável em sala tem um bloco próprio aqui (Jogo da Nota, Infiltrado, Quiz).
+ * Cada jogo jogável em sala tem um bloco próprio aqui (Jogo da Nota, Infiltrado, Quiz, Você Prefere?).
  */
-import type { InfiltradoChallenge, NotaChallenge, QuizChallenge } from "@/content/types";
+import type { InfiltradoChallenge, NotaChallenge, PrefereChallenge, QuizChallenge } from "@/content/types";
 import { assertRule, PIECE_KINDS, type PieceKind, type Player, type Rng } from "@/engine/core";
 import {
   createInfiltrado,
@@ -19,6 +19,7 @@ import {
   type InfiltradoView,
 } from "@/engine/infiltrado";
 import { createNota, DEFAULT_NOTA_CONFIG, guessersOf, MIN_PLAYERS, reduceNota, viewNotaFor, type NotaConfig, type NotaState } from "@/engine/nota";
+import { createPrefere, DEFAULT_PREFERE_CONFIG, PREFERE_MIN, reducePrefere, viewPrefereFor, type PrefereConfig, type PrefereState, type PrefereView } from "@/engine/prefere";
 import { createQuiz, DEFAULT_QUIZ_CONFIG, QUIZ_GRACE_MS, QUIZ_MIN, QUIZ_SECONDS_OPTIONS, quizLimitMs, reduceQuiz, viewQuizFor, type QuizConfig, type QuizState, type QuizView } from "@/engine/quiz";
 
 export const MAX_ROOM_PLAYERS = 12;
@@ -27,8 +28,8 @@ export const ONLINE_WINDOW_MS = 20_000;
 /** Anfitrião sem sinal por mais que isso pode ter o comando assumido por outra pessoa. */
 export const HOST_STALE_MS = 45_000;
 
-export type RoomGame = "nota" | "infiltrado" | "quiz";
-export const ROOM_GAMES: RoomGame[] = ["nota", "infiltrado", "quiz"];
+export type RoomGame = "nota" | "infiltrado" | "quiz" | "voce-prefere";
+export const ROOM_GAMES: RoomGame[] = ["nota", "infiltrado", "quiz", "voce-prefere"];
 
 export interface RoomPlayer {
   id: string;
@@ -41,7 +42,7 @@ export interface RoomPlayer {
 
 export type RoomStatus = "lobby" | "playing" | "ended" | "closed";
 
-export type RoomMatch = { game: "nota"; state: NotaState } | { game: "infiltrado"; state: InfiltradoState } | { game: "quiz"; state: QuizState };
+export type RoomMatch = { game: "nota"; state: NotaState } | { game: "infiltrado"; state: InfiltradoState } | { game: "quiz"; state: QuizState } | { game: "voce-prefere"; state: PrefereState };
 
 export interface RoomState {
   code: string;
@@ -49,7 +50,7 @@ export interface RoomState {
   status: RoomStatus;
   hostId: string;
   players: RoomPlayer[];
-  config: { nota: NotaConfig; infiltrado: InfiltradoConfig; quiz: QuizConfig };
+  config: { nota: NotaConfig; infiltrado: InfiltradoConfig; quiz: QuizConfig; prefere: PrefereConfig };
   themes: Record<RoomGame, string[]>;
   match: RoomMatch | null;
   /** Prazo da fase atual (epoch ms), controlado pelo servidor. */
@@ -68,6 +69,7 @@ export type NotaRoomAction =
 export type InfiltradoRoomAction = { type: "seen" } | { type: "next-hint-round" } | { type: "open-vote" } | { type: "vote"; targetId: string } | { type: "close-vote" } | { type: "next" };
 
 export type QuizRoomAction = { type: "answer"; choice: number } | { type: "close" } | { type: "next" };
+export type PrefereRoomAction = { type: "choose"; choice: "a" | "b" } | { type: "swap" } | { type: "reveal" } | { type: "next" };
 
 export type RoomAction =
   | { type: "set-ready"; ready: boolean }
@@ -77,6 +79,7 @@ export type RoomAction =
       config?: Partial<Pick<NotaConfig, "mode" | "rounds" | "timerSec" | "tellerBonus" | "scoreAvaliacao" | "table">>;
       infiltrado?: Partial<InfiltradoConfig>;
       quiz?: Partial<QuizConfig>;
+      prefere?: Partial<PrefereConfig>;
       themes?: string[];
     }
   | { type: "start" }
@@ -87,12 +90,13 @@ export type RoomAction =
   | { type: "time-up" }
   | { type: "back-to-lobby" }
   | { type: "close" }
-  | { type: "game"; action: NotaRoomAction | InfiltradoRoomAction | QuizRoomAction };
+  | { type: "game"; action: NotaRoomAction | InfiltradoRoomAction | QuizRoomAction | PrefereRoomAction };
 
 export interface RoomPools {
   nota: readonly NotaChallenge[];
   infiltrado: readonly InfiltradoChallenge[];
   quiz: readonly QuizChallenge[];
+  prefere: readonly PrefereChallenge[];
 }
 
 export interface RoomCtx {
@@ -112,7 +116,7 @@ export function createRoomState(code: string, host: { id: string; nickname: stri
     status: "lobby",
     hostId: host.id,
     players: [{ ...host, joinedAt: now, ready: true, left: false }],
-    config: { nota: { ...DEFAULT_NOTA_CONFIG }, infiltrado: { ...DEFAULT_INFILTRADO_CONFIG }, quiz: { ...DEFAULT_QUIZ_CONFIG } },
+    config: { nota: { ...DEFAULT_NOTA_CONFIG }, infiltrado: { ...DEFAULT_INFILTRADO_CONFIG }, quiz: { ...DEFAULT_QUIZ_CONFIG }, prefere: { ...DEFAULT_PREFERE_CONFIG } },
     themes,
     match: null,
     deadline: null,
@@ -121,11 +125,18 @@ export function createRoomState(code: string, host: { id: string; nickname: stri
 
 export const activePlayers = (s: RoomState) => s.players.filter((p) => !p.left);
 export const normalizeNickname = (raw: string) => raw.trim().replace(/\s+/g, " ");
-export const minPlayersFor = (s: Pick<RoomState, "game" | "config">) => (s.game === "nota" ? MIN_PLAYERS[s.config.nota.mode] : s.game === "quiz" ? QUIZ_MIN : INFILTRADO_MIN);
+export const minPlayersFor = (s: Pick<RoomState, "game" | "config">) =>
+  s.game === "nota" ? MIN_PLAYERS[s.config.nota.mode] : s.game === "quiz" ? QUIZ_MIN : s.game === "voce-prefere" ? PREFERE_MIN : INFILTRADO_MIN;
 
 /** Salas criadas antes de um jogo existir não têm a configuração dele. */
 export const withDefaults = (s: RoomState): RoomState =>
-  s.config.quiz && s.themes.quiz ? s : { ...s, config: { ...s.config, quiz: s.config.quiz ?? { ...DEFAULT_QUIZ_CONFIG } }, themes: { ...s.themes, quiz: s.themes.quiz ?? [] } };
+  s.config.quiz && s.config.prefere && s.themes.quiz && s.themes["voce-prefere"]
+    ? s
+    : {
+        ...s,
+        config: { ...s.config, quiz: s.config.quiz ?? { ...DEFAULT_QUIZ_CONFIG }, prefere: s.config.prefere ?? { ...DEFAULT_PREFERE_CONFIG } },
+        themes: { ...s.themes, quiz: s.themes.quiz ?? [], "voce-prefere": s.themes["voce-prefere"] ?? [] },
+      };
 
 /** Entrada de alguém novo. Reentrada (mesmo token) usa `rejoinRoom`. */
 export function joinRoom(s: RoomState, p: { id: string; nickname: string; piece: PieceKind }, now: number): RoomState {
@@ -319,12 +330,49 @@ function applyQuiz(s: RoomState, m: QuizState, actorId: string, a: QuizRoomActio
   }
 }
 
+/* ---------- Você Prefere? em sala ---------- */
+
+/** Em sala cada um escolhe no próprio celular: a votação abre junto com o dilema. */
+const preferOpen = (m: PrefereState, ctx: RoomCtx) => (m.phase === "question" ? reducePrefere(m, { type: "open-vote" }, ctx.pools.prefere, ctx.rng) : m);
+
+/** Revela sozinho quando todos os presentes já escolheram. */
+function prefereAuto(s: RoomState, m: PrefereState, ctx: RoomCtx): RoomState {
+  let next = preferOpen(m, ctx);
+  if (next.phase === "vote" && Object.keys(next.votes).length > 0) {
+    const absent = absentIds(s);
+    const pending = next.players.filter((p) => next.votes[p.id] === undefined && !absent.has(p.id));
+    if (pending.length === 0) next = reducePrefere(next, { type: "reveal", force: true }, ctx.pools.prefere, ctx.rng);
+  }
+  return { ...s, match: { game: "voce-prefere", state: next } };
+}
+
+function applyPrefere(s: RoomState, m: PrefereState, actorId: string, a: PrefereRoomAction, ctx: RoomCtx): RoomState {
+  const pool = ctx.pools.prefere;
+  switch (a.type) {
+    case "choose":
+      // Cada um escolhe por si: quem vota é quem está autenticado. Dá para mudar até revelar.
+      return prefereAuto(s, reducePrefere(m, { type: "vote", playerId: actorId, choice: a.choice }, pool, ctx.rng), ctx);
+    case "swap":
+      requireHost(s, actorId);
+      return prefereAuto(s, reducePrefere(m, { type: "swap" }, pool, ctx.rng), ctx);
+    case "reveal":
+      requireHost(s, actorId);
+      return prefereAuto(s, reducePrefere(m, { type: "reveal", force: true }, pool, ctx.rng), ctx);
+    case "next": {
+      requireHost(s, actorId);
+      const next = reducePrefere(m, { type: "next" }, pool, ctx.rng);
+      return prefereAuto({ ...s, status: next.phase === "end" ? "ended" : "playing" }, next, ctx);
+    }
+  }
+}
+
 /* ---------- regras gerais ---------- */
 
 function afterLeave(s: RoomState, ctx: RoomCtx): RoomState {
   if (!s.match) return s;
   if (s.match.game === "nota") return notaAuto(s, s.match.state, ctx);
   if (s.match.game === "quiz") return quizAuto(s, s.match.state, ctx);
+  if (s.match.game === "voce-prefere") return prefereAuto(s, s.match.state, ctx);
   return infiltradoAuto(s, s.match.state, ctx);
 }
 
@@ -357,9 +405,11 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
       const quiz = { ...s.config.quiz, ...a.quiz };
       assertRule(Number.isInteger(quiz.questions) && quiz.questions >= 3 && quiz.questions <= 20, "questions", "Escolha de 3 a 20 perguntas.");
       assertRule(QUIZ_SECONDS_OPTIONS.includes(quiz.seconds), "seconds", "Tempo por pergunta inválido.");
+      const prefere = { ...s.config.prefere, ...a.prefere };
+      assertRule(Number.isInteger(prefere.rounds) && prefere.rounds >= 1 && prefere.rounds <= 20, "rounds", "Escolha entre 1 e 20 rodadas.");
       const themes = a.themes ?? s.themes[s.game];
       assertRule(themes.length > 0, "themes", "Escolha pelo menos um tema.");
-      return { ...s, config: { nota, infiltrado, quiz }, themes: { ...s.themes, [s.game]: themes } };
+      return { ...s, config: { nota, infiltrado, quiz, prefere }, themes: { ...s.themes, [s.game]: themes } };
     }
 
     case "start": {
@@ -372,6 +422,10 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
       if (s.game === "nota") {
         const match = createNota(s.config.nota, players, ctx.pools.nota.filter((c) => themes.includes(c.theme)), ctx.rng);
         return { ...s, status: "playing", match: { game: "nota", state: match }, deadline: null };
+      }
+      if (s.game === "voce-prefere") {
+        const match = createPrefere(s.config.prefere, players, ctx.pools.prefere.filter((c) => themes.includes(c.theme)), ctx.rng);
+        return prefereAuto({ ...s, status: "playing", deadline: null }, match, ctx);
       }
       if (s.game === "quiz") {
         const match = createQuiz(s.config.quiz, players, ctx.pools.quiz.filter((c) => themes.includes(c.theme)), ctx.rng, ctx.now);
@@ -428,6 +482,7 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
       assertRule(s.status === "playing" && s.match, "not-playing", "Nenhuma partida em andamento.");
       if (s.match.game === "nota") return applyNota(s, s.match.state, actorId, a.action as NotaRoomAction, ctx);
       if (s.match.game === "quiz") return applyQuiz(s, s.match.state, actorId, a.action as QuizRoomAction, ctx);
+      if (s.match.game === "voce-prefere") return applyPrefere(s, s.match.state, actorId, a.action as PrefereRoomAction, ctx);
       return applyInfiltrado(s, s.match.state, actorId, a.action as InfiltradoRoomAction, ctx);
     }
   }
@@ -435,7 +490,7 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
 
 /* ---------- projeção: o que cada participante recebe ---------- */
 
-export type RoomMatchView = { game: "nota"; state: NotaState; answered: string[] } | { game: "infiltrado"; state: InfiltradoView } | { game: "quiz"; state: QuizView };
+export type RoomMatchView = { game: "nota"; state: NotaState; answered: string[] } | { game: "infiltrado"; state: InfiltradoView } | { game: "quiz"; state: QuizView } | { game: "voce-prefere"; state: PrefereView };
 
 export interface RoomView {
   code: string;
@@ -457,6 +512,8 @@ export function viewRoom(raw: RoomState, viewerId: string, presence: Readonly<Re
   let match: RoomMatchView | null = null;
   if (s.match?.game === "quiz") {
     match = { game: "quiz", state: viewQuizFor(s.match.state, viewerId) };
+  } else if (s.match?.game === "voce-prefere") {
+    match = { game: "voce-prefere", state: viewPrefereFor(s.match.state, viewerId) };
   } else if (s.match?.game === "nota") {
     const m = s.match.state;
     const filtered = { ...viewNotaFor(m, viewerId), used: [] };
