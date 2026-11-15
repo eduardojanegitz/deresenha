@@ -38,7 +38,7 @@ export const GAMES: GameDefinition[] = [
     tint: "var(--color-gema-t)",
     players: { min: 2, max: 12 },
     modes: ["shared", "room"],
-    available: ["shared"],
+    available: ["shared", "room"],
     status: "ready",
     minutes: "2 minutos por rodada",
     rules: [

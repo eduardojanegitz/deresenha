@@ -49,9 +49,17 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
               <p>{g.scoring}</p>
             </section>
           )}
-          {g.modes.includes("room") && (
-            <p className="muted mt-6 text-[15px]">O modo em que cada um usa o próprio celular chega na etapa 4. Por enquanto, um celular passa de mão em mão.</p>
-          )}
+          {g.available.includes("room") ? (
+            <div className="card mt-8 grid gap-3 p-5">
+              <h2>Cada um no seu celular</h2>
+              <p className="muted">Crie uma sala e a turma entra pelo código, link ou QR Code. A nota secreta chega só no celular de quem pensa.</p>
+              <Link href="/sala" className="btn btn-ghost">
+                Criar ou entrar numa sala
+              </Link>
+            </div>
+          ) : g.modes.includes("room") ? (
+            <p className="muted mt-6 text-[15px]">O modo em que cada um usa o próprio celular ainda não chegou para este jogo. Por enquanto, um celular passa de mão em mão.</p>
+          ) : null}
           <div className="sticky-cta">
             <Link href={`/jogos/${g.id}/jogar`} className="btn">
               Configurar partida

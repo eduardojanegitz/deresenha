@@ -26,7 +26,7 @@ export function Library() {
           </button>
         ))}
       </div>
-      {f === "room" && <p className="muted mt-3.5 text-[15px]">Cada um no seu celular é o Modo Sala, que chega na etapa 4. Até lá, tudo roda num celular só.</p>}
+      {f === "room" && <p className="muted mt-3.5 text-[15px]">Cada um no seu celular é o Modo Sala. Por enquanto ele funciona no Jogo da Nota; os outros jogos chegam a ele depois.</p>}
       <ul className="mt-[18px] grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:grid-cols-4">
         {list.map((g) => {
           const ready = g.status === "ready";

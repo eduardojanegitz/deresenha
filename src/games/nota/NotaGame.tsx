@@ -365,7 +365,7 @@ function GuessPhase({ s, dispatch, P }: { s: NotaState; dispatch: (a: NotaAction
   );
 }
 
-function RevealPhase({ s, P, onNext }: { s: NotaState; P: (id: string) => Player; onNext: () => void }) {
+export function RevealPhase({ s, P, onNext, canAdvance = true }: { s: NotaState; P: (id: string) => Player; onNext: () => void; canAdvance?: boolean }) {
   const r = s.result!;
   const [landed, setLanded] = useState(false);
   const [settled, setSettled] = useState(false);
@@ -420,9 +420,13 @@ function RevealPhase({ s, P, onNext }: { s: NotaState; P: (id: string) => Player
           )}
         </motion.ul>
         <motion.div className="w-full max-w-[520px]" {...later}>
+          {canAdvance ? (
           <button className="btn btn-gema" onClick={onNext} disabled={!settled}>
             Ver placar
           </button>
+        ) : (
+          <p className="muted py-3">Esperando quem comanda a sala avançar.</p>
+        )}
         </motion.div>
       </div>
     );
@@ -450,9 +454,13 @@ function RevealPhase({ s, P, onNext }: { s: NotaState; P: (id: string) => Player
         {s.config.scoreAvaliacao && <Stat wide k="Pontos da rodada" v={r.rows.filter((x) => x.points).map((x) => `${P(x.playerId).name} +${x.points}`).join(", ") || "Ninguém pontuou"} />}
       </motion.div>
       <motion.div className="w-full max-w-[520px]" {...later}>
-        <button className="btn btn-gema" onClick={onNext} disabled={!settled}>
+        {canAdvance ? (
+          <button className="btn btn-gema" onClick={onNext} disabled={!settled}>
           {last ? "Ver resumo" : "Próxima situação"}
         </button>
+        ) : (
+          <p className="muted py-3">Esperando quem comanda a sala avançar.</p>
+        )}
       </motion.div>
     </div>
   );
@@ -468,7 +476,8 @@ function Stat({ k, v, wide = false }: { k: string; v: string; wide?: boolean }) 
   );
 }
 
-function EndPhase({ s, onRematch, onSetup }: { s: NotaState; onRematch: () => void; onSetup: () => void }) {
+export function EndPhase({ s, onRematch, onSetup, actions }: { s: NotaState; onRematch?: () => void; onSetup?: () => void; actions?: React.ReactNode }) {
+  const footer = actions ?? <EndActions onRematch={onRematch ?? (() => {})} onSetup={onSetup ?? (() => {})} />;
   const scored = s.config.mode === "secreta" || s.config.scoreAvaliacao;
   if (scored) {
     const entries = s.players.map((p) => ({ id: p.id, name: p.name, piece: p.piece, score: s.scores[p.id] ?? 0 }));
@@ -480,7 +489,7 @@ function EndPhase({ s, onRematch, onSetup }: { s: NotaState; onRematch: () => vo
         <h1 className="text-center">{title}</h1>
         <Podium entries={entries} />
         {sorted.length > 3 && <Scoreboard players={s.players.filter((p) => sorted.slice(3).some((x) => x.id === p.id))} scores={s.scores} />}
-        <EndActions onRematch={onRematch} onSetup={onSetup} />
+        {footer}
       </>
     );
   }
@@ -518,7 +527,7 @@ function EndPhase({ s, onRematch, onSetup }: { s: NotaState; onRematch: () => vo
           </li>
         ))}
       </ol>
-      <EndActions onRematch={onRematch} onSetup={onSetup} />
+      {footer}
     </>
   );
 }
