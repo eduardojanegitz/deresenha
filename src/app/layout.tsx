@@ -24,7 +24,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${rounded.variable} ${onest.variable}`}>
-      <body>
+      {/* Extensões do navegador (ColorZilla, gerenciadores de senha, tradutores) põem atributos
+          no <body> antes do React carregar. Isso só ignora os atributos do próprio body. */}
+      <body suppressHydrationWarning>
         <SoundProvider>
           <TopBar />
           <main id="conteudo">{children}</main>
