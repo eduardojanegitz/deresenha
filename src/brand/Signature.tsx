@@ -8,9 +8,9 @@ import { D_PATH } from "./Monogram";
  * Assinatura: o monograma DR se abre e vira "DeResenha".
  *
  * Desenho: o mesmo traço redondo do monograma, mais gordo (22) e com minúsculas altas,
- * para a palavra ter peso de letreiro. Três cores com papéis fixos: o D é amarelo-gema e
- * tem rosto (é o personagem da marca), o R é chiclete e o resto da palavra é verde-feltro,
- * a cor da mesa. Cada letra tem a base sólida mais escura, como as peças.
+ * para a palavra ter peso de letreiro. Três cores fechadas com papéis fixos: o D é
+ * verde-feltro e tem rosto (é o personagem da marca), o R é framboesa e o resto da palavra
+ * é verde-noite. Cada letra tem a base sólida mais escura, como as peças.
  *
  * Abertura: o DR aparece encaixado no centro, o R se desencaixa do D, o "e" nasce no vão
  * e "esenha" sai de trás do R. Depois o D espia a palavra. Tudo em transform, com molas;
@@ -21,9 +21,9 @@ const STROKE = 22;
 /** Quanto a base escura desce, como a sombra sólida das peças. */
 const DEPTH = 7;
 
-const GEMA = ["var(--color-gema)", "var(--color-gema-d)"] as const;
-const CHICLETE = ["var(--color-chiclete)", "var(--color-chiclete-d)"] as const;
 const FELTRO = ["var(--color-feltro)", "var(--color-feltro-d)"] as const;
+const FRAMBOESA = ["var(--color-chiclete-d)", "#a8304f"] as const;
+const NOITE = ["var(--color-noite)", "var(--color-noite-3)"] as const;
 
 /** Minúsculas: linha de base 91, bojo de raio 30 centrado em 61. */
 const e = (c: number) => `M${c - 30} 61H${c + 30}A30 30 0 1 0 ${c + 19.3} 84`;
@@ -173,19 +173,19 @@ export function SignatureSVG({ ref, className = "" }: { ref?: React.Ref<SVGSVGEl
         {TAIL.map((t) => (
           <g key={t.key} className="sg-tail" data-center={t.center}>
             <g className="sg-letter" style={box}>
-              <Stroke d={t.d} colors={FELTRO} />
+              <Stroke d={t.d} colors={NOITE} />
             </g>
           </g>
         ))}
         <g className="sg-dr" style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }}>
           <g className="sg-e1" style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }}>
             <g className="sg-letter" style={box}>
-              <Stroke d={E1} colors={FELTRO} />
+              <Stroke d={E1} colors={NOITE} />
             </g>
           </g>
           {/* O D é a cabeça: letra e rosto se movem juntos. */}
           <g className="sg-letter" style={box}>
-            <Stroke d={D_PATH} colors={GEMA} />
+            <Stroke d={D_PATH} colors={FELTRO} />
             <g className="sg-eyes piece alive" style={{ ["--bd" as string]: "2.4s" }}>
               <rect className="eye" x={25} y={37} width={8} height={18} rx={4} fill="var(--color-tinta)" stroke="none" />
               <rect className="eye" x={39} y={37} width={8} height={18} rx={4} fill="var(--color-tinta)" stroke="none" />
@@ -193,9 +193,9 @@ export function SignatureSVG({ ref, className = "" }: { ref?: React.Ref<SVGSVGEl
           </g>
           <g className="sg-r">
             <g className="sg-letter" style={box}>
-              <Stroke d={R_PATH} colors={CHICLETE} />
+              <Stroke d={R_PATH} colors={FRAMBOESA} />
               <g className="sg-leg" style={{ transformBox: "view-box", transformOrigin: `${R_X + 14}px 51px` }}>
-                <Stroke d={R_LEG} colors={CHICLETE} />
+                <Stroke d={R_LEG} colors={FRAMBOESA} />
               </g>
             </g>
           </g>
