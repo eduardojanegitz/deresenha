@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Três direções</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800;900&family=Onest:wght@400;600;700&family=Big+Shoulders+Display:wght@800;900&family=Barlow:wght@400;600&family=Rubik+Mono+One&family=Rethink+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#E9ECE7;color:#14241E;font:400 16px/1.5 "Onest",system-ui,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 16px 64px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+h1{font:900 clamp(30px,6vw,44px)/1.05 "M PLUS Rounded 1c",sans-serif;margin:0}
+header p{margin:6px 0 0;color:#4B5E56;max-width:60ch}
+header a{color:#0F6B52;font-weight:700}
+.boards{display:grid;gap:18px}
+@media (min-width:980px){.boards{grid-template-columns:repeat(3,1fr)}}
+.board{border-radius:26px;overflow:hidden;display:grid;grid-template-rows:auto 1fr}
+.stage{padding:26px 22px;min-height:230px;display:grid;align-content:space-between;gap:20px;position:relative}
+.info{background:#fff;padding:20px 22px 24px;display:grid;gap:12px;align-content:start}
+.info h2{margin:0;font:900 22px/1.1 "M PLUS Rounded 1c",sans-serif;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{font:700 12px/1 "Onest";padding:7px 10px;border-radius:99px;background:#0F6B52;color:#fff}
+.info p{margin:0;color:#4B5E56;font-size:15px}
+.info dl{margin:0;display:grid;gap:8px;font-size:14.5px}
+.info dt{font-weight:700;color:#14241E}
+.info dd{margin:0;color:#4B5E56}
+.sw{display:flex;gap:6px}
+.sw i{width:34px;height:34px;border-radius:10px;display:block}
+
+/* A — Peças */
+.a .stage{background:#F1F4EF}
+.a .mark{width:110px;color:#14241E}
+.a .t{font:900 34px/1 "M PLUS Rounded 1c";color:#14241E}
+.a .row{display:flex;align-items:flex-end;gap:10px}
+.a .pc{display:block}
+.a .btn{display:inline-block;background:#0F6B52;color:#fff;font:800 16px "M PLUS Rounded 1c";padding:13px 20px;border-radius:16px;box-shadow:0 5px 0 #0A4D3B}
+
+/* B — Placar */
+.b .stage{background:#0E1830;color:#FFE45C}
+.b .flaps{display:flex;gap:8px}
+.b .flap{width:76px;height:96px;border-radius:8px;background:#1B2748;position:relative;display:grid;place-items:center;font:900 76px/1 "Big Shoulders Display";color:#FFE45C;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.b .flap::after{content:"";position:absolute;left:0;right:0;top:50%;height:3px;background:#0E1830}
+.b .t{font:900 46px/1 "Big Shoulders Display";letter-spacing:.02em;color:#fff}
+.b .led{display:flex;gap:4px}
+.b .led i{width:8px;height:8px;border-radius:50%;background:#3DDC84;opacity:.9}
+.b .led i:nth-child(3n){background:#FF4D4D}
+.b .meta{font:600 14px "Barlow";color:#9FB0D6}
+
+/* C — Riso */
+.c .stage{background:#F7F4F2;overflow:hidden}
+.c .stage::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(0,0,0,.08) 1px,transparent 1.2px);background-size:5px 5px;pointer-events:none}
+.c .mark{position:relative;width:150px;height:110px}
+.c .mark span{position:absolute;font:400 104px/1 "Rubik Mono One";mix-blend-mode:multiply}
+.c .mark .d{color:#FF48B0;left:0;top:0}
+.c .mark .r{color:#0078BF;left:58px;top:6px;transform:rotate(-6deg)}
+.c .t{font:400 26px/1.1 "Rubik Mono One";color:#0078BF;transform:rotate(-2deg);mix-blend-mode:multiply}
+.c .sticker{position:absolute;right:20px;top:22px;background:#FFE800;font:600 13px "Rethink Sans";padding:8px 12px;border-radius:40% 55% 45% 60%;transform:rotate(8deg)}
+.c .cut{font:600 15px "Rethink Sans";color:#14241E;background:#fff;padding:8px 12px;display:inline-block;clip-path:polygon(0 6%,100% 0,97% 100%,3% 92%)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Três direções para o DeResenha</h1>
+      <p>Três conceitos diferentes, cada um com sua própria cor, letra, forma, movimento e DR. A recomendada é a primeira, e é a que está no protótipo.</p>
+    </div>
+    <a href="index.html">Abrir o protótipo</a>
+  </header>
+
+  <div class="boards">
+    <article class="board a">
+      <div class="stage">
+        <div class="row">
+          <svg class="mark" viewBox="-6 -6 125 112" aria-label="Monograma DR"><g fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"><path d="M9 91V9H30A32 32 0 0 1 62 41V59A32 32 0 0 1 30 91Z"/><g transform="translate(62 0)"><path d="M0 91V9H18A21 21 0 0 1 18 51H0"/><path d="M14 51L42 91"/></g></g></svg>
+          <svg class="pc" width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="25" fill="#D94A70"/><circle cx="32" cy="30" r="25" fill="#FF6F91"/><rect x="22.5" y="21" width="5" height="10" rx="2.5" fill="#14241E"/><rect x="36.5" y="21" width="5" height="10" rx="2.5" fill="#14241E"/><path d="M28 36h8" stroke="#14241E" stroke-width="2.8" stroke-linecap="round"/></svg>
+          <svg class="pc" width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 14L55 55H9Z" fill="#8C76E0" stroke="#8C76E0" stroke-width="10" stroke-linejoin="round"/><path d="M32 10L55 51H9Z" fill="#B7A4FF" stroke="#B7A4FF" stroke-width="10" stroke-linejoin="round"/><rect x="23" y="34" width="6" height="4" rx="2" fill="#14241E"/><rect x="37" y="34" width="6" height="4" rx="2" fill="#14241E"/></svg>
+        </div>
+        <div class="t">Nota 7, sem recurso.</div>
+        <div><span class="btn">Começar partida</span></div>
+      </div>
+      <div class="info">
+        <h2>A · Peças <span class="badge">Recomendada</span></h2>
+        <p>A caixa de jogos da turma: fichas, pinos e uma mesa de feltro. As peças ganham olhos e viram personagens.</p>
+        <div class="sw"><i style="background:#0F6B52"></i><i style="background:#FF6F91"></i><i style="background:#FFC23D"></i><i style="background:#6EC1FF"></i><i style="background:#B7A4FF"></i><i style="background:#F1F4EF;box-shadow:inset 0 0 0 1px #ccd"></i></div>
+        <dl>
+          <dt>Tipografia</dt><dd>M PLUS Rounded 1c 900 nos títulos e números, Onest na interface.</dd>
+          <dt>Formas</dt><dd>Primitivas sólidas com espessura colorida embaixo. Traço único de pontas redondas.</dd>
+          <dt>Movimento</dt><dd>Físico: peças caem, quicam e encaixam; botões afundam a própria espessura.</dd>
+          <dt>DR</dt><dd>O trecho reto do D é a haste do R. Duas peças encaixadas, um traço só.</dd>
+          <dt>Por que</dt><dd>Nasce do assunto, usa um vocabulário só para logo, personagens e interface, e é leve de animar.</dd>
+        </dl>
+      </div>
+    </article>
+
+    <article class="board b">
+      <div class="stage">
+        <div class="flaps"><div class="flap">D</div><div class="flap">R</div></div>
+        <div>
+          <div class="t">PLACAR GERAL</div>
+          <div class="led" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="meta">Rodada 3 · Beto lidera com 240</div>
+      </div>
+      <div class="info">
+        <h2>B · Placar</h2>
+        <p>Programa de auditório de madrugada: placar de estádio, letreiro de LED e plaquinhas que viram.</p>
+        <div class="sw"><i style="background:#0E1830"></i><i style="background:#FFE45C"></i><i style="background:#3DDC84"></i><i style="background:#FF4D4D"></i><i style="background:#1B2748"></i></div>
+        <dl>
+          <dt>Tipografia</dt><dd>Big Shoulders Display 900, condensada, com Barlow.</dd>
+          <dt>Formas</dt><dd>Retângulos de canto chanfrado, matriz de pontos, divisória das placas.</dd>
+          <dt>Movimento</dt><dd>Placas virando, contadores girando, varredura de luz.</dd>
+          <dt>DR</dt><dd>Duas plaquinhas de split-flap; elas viram e revelam o resto do nome.</dd>
+          <dt>Risco</dt><dd>Escura por padrão, fria e competitiva demais para jogos subjetivos.</dd>
+        </dl>
+      </div>
+    </article>
+
+    <article class="board c">
+      <div class="stage">
+        <span class="sticker">sexta, 22h</span>
+        <div class="mark" aria-label="Monograma DR"><span class="d">D</span><span class="r">R</span></div>
+        <div class="t">noite de jogos</div>
+        <div><span class="cut">traz a turma, a gente traz os jogos</span></div>
+      </div>
+      <div class="info">
+        <h2>C · Riso</h2>
+        <p>Filipeta de festa em risografia: papel recortado, rosa fluor e azul sobrepostos, registro desalinhado de propósito.</p>
+        <div class="sw"><i style="background:#FF48B0"></i><i style="background:#0078BF"></i><i style="background:#FFE800"></i><i style="background:#F7F4F2;box-shadow:inset 0 0 0 1px #ccd"></i></div>
+        <dl>
+          <dt>Tipografia</dt><dd>Rubik Mono One com Rethink Sans; letreiros recortados à mão.</dd>
+          <dt>Formas</dt><dd>Recortes irregulares, adesivos, granulação de impressão.</dd>
+          <dt>Movimento</dt><dd>Stop-motion a 12 quadros por segundo, papéis deslizando.</dd>
+          <dt>DR</dt><dd>O D recortado do papel; o R montado com a sobra do recorte.</dd>
+          <dt>Risco</dt><dd>Textura pesa no celular, contraste difícil e estética que cansa no uso repetido.</dd>
+        </dl>
+      </div>
+    </article>
+  </div>
+</div>
+</body>
+</html>
