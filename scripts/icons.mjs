@@ -1,7 +1,8 @@
-// Gera os ícones do app (src/app/icon.svg e public/icon-maskable.svg) a partir do monograma
+// Gera os ícones do app (src/app/icon.svg, public/icon-maskable.svg e os PNGs) a partir do monograma
 // do letreiro. As constantes repetem src/brand/letreiro.ts: se mudar lá, mude aqui e rode
 //   node scripts/icons.mjs
 import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const WORD = JSON.parse(readFileSync(new URL("../src/brand/wordmark-glyphs.json", import.meta.url), "utf8"));
 const [D, , R] = WORD.letters;
@@ -39,4 +40,16 @@ const svg = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 
 writeFileSync(new URL("../src/app/icon.svg", import.meta.url), svg(`<rect width="160" height="160" rx="40" fill="#0F6B52"/>${monogram(80, 80, 118, "#062a20")}`));
 // Ícone "maskable": fundo cheio e o desenho dentro da zona segura (80% central).
 writeFileSync(new URL("../public/icon-maskable.svg", import.meta.url), svg(`<rect width="160" height="160" fill="#0F6B52"/>${monogram(80, 80, 92, "#062a20")}`));
+// PNGs: o iPhone só aceita PNG no ícone da tela inicial, e o Android pede 192 e 512 px
+// para oferecer a instalação. O iOS arredonda os cantos sozinho, então lá vai o quadrado cheio.
+const sharp = (await import("sharp")).default;
+const full = svg(`<rect width="160" height="160" fill="#0F6B52"/>${monogram(80, 80, 118, "#062a20")}`);
+const safe = svg(`<rect width="160" height="160" fill="#0F6B52"/>${monogram(80, 80, 92, "#062a20")}`);
+const png = (src, size, out) => sharp(Buffer.from(src), { density: (72 * size) / 160 }).resize(size, size).png().toFile(fileURLToPath(new URL(out, import.meta.url)));
+await Promise.all([
+  png(full, 180, "../src/app/apple-icon.png"),
+  png(full, 192, "../public/icon-192.png"),
+  png(full, 512, "../public/icon-512.png"),
+  png(safe, 512, "../public/icon-maskable-512.png"),
+]);
 console.log("ícones gerados");

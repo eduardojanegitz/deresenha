@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Monogram } from "@/brand/Monogram";
 import { IconBack, IconSound } from "./Icons";
 import { useSound } from "./sound";
+// Carregado em toda página para guardar o aviso de instalação do Chrome assim que ele vier.
+import "./install";
 
 export function TopBar() {
   const path = usePathname();

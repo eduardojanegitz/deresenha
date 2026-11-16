@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Piece } from "@/brand/Piece";
 import { Signature } from "@/brand/Signature";
 import { GamePieceTable } from "./GamePieceTable";
+import { InstallApp } from "./InstallApp";
 
 /**
  * Início em três faixas: a marca e o convite (com a mesa de peças ao lado), três portas de
- * entrada com o mesmo peso (jogo do dia, cada um no seu celular, campeonato) e os atalhos.
+ * entrada com o mesmo peso (jogo do dia, cada um no seu celular, campeonato), os atalhos e,
+ * por fim, o convite para instalar no celular.
  */
 export default function Home() {
   return (
@@ -101,6 +103,8 @@ export default function Home() {
           </Link>
         ))}
       </nav>
+
+      <InstallApp />
     </div>
   );
 }
