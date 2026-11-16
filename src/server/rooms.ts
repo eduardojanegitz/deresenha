@@ -24,11 +24,11 @@ export class RoomError extends Error {
 const ROOM_TTL = "6 hours";
 /** Conteúdo publicado no painel (com cache curto e reserva embutida). */
 async function roomContent() {
-  const [nota, infiltrado, quiz, prefere] = await Promise.all([contentFor("nota"), contentFor("infiltrado"), contentFor("quiz"), contentFor("voce-prefere")]);
+  const [nota, infiltrado, quiz, prefere, limite] = await Promise.all([contentFor("nota"), contentFor("infiltrado"), contentFor("quiz"), contentFor("voce-prefere"), contentFor("limite")]);
   const ids = (b: { themes: { id: string }[] }) => b.themes.map((t) => t.id);
   return {
-    pools: { nota: nota.challenges, infiltrado: infiltrado.challenges, quiz: quiz.challenges, prefere: prefere.challenges },
-    themes: { nota: ids(nota), infiltrado: ids(infiltrado), quiz: ids(quiz), "voce-prefere": ids(prefere) },
+    pools: { nota: nota.challenges, infiltrado: infiltrado.challenges, quiz: quiz.challenges, prefere: prefere.challenges, limite: limite.challenges },
+    themes: { nota: ids(nota), infiltrado: ids(infiltrado), quiz: ids(quiz), "voce-prefere": ids(prefere), limite: ids(limite) },
   };
 }
 /** Atualiza "visto por último" no máximo a cada tantos ms, para não escrever a cada consulta. */

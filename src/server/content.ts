@@ -51,6 +51,12 @@ export function rowToChallenge(r: Row): Challenge | null {
       const answer = Number(d.answer);
       return options.length >= 2 && Number.isInteger(answer) && answer >= 0 && answer < options.length ? { ...base, game: "quiz", question: String(d.question ?? ""), options, answer } : null;
     }
+    case "limite": {
+      const answer = Number(d.answer);
+      return Number.isFinite(answer) && answer > 0
+        ? { ...base, game: "limite", question: String(d.question ?? ""), answer, unit: String(d.unit ?? ""), ...(d.fact ? { fact: String(d.fact) } : {}) }
+        : null;
+    }
     default:
       return null;
   }
@@ -99,7 +105,14 @@ export function invalidateContent() {
 
 export async function contentFor<G extends GameId>(game: G) {
   const b = await loadContent();
-  const challenges = b.challenges.filter((c) => c.game === game) as Extract<Challenge, { game: G }>[];
+  let challenges = b.challenges.filter((c) => c.game === game) as Extract<Challenge, { game: G }>[];
+  let themes = b.themes;
+  // Jogo novo cujo conteúdo ainda não foi copiado para o banco (falta rodar o seed):
+  // usa o embutido, para o jogo funcionar mesmo assim.
+  if (challenges.length === 0 && b.source === "db") {
+    challenges = CHALLENGES.filter((c) => c.game === game && c.status === "published") as Extract<Challenge, { game: G }>[];
+    themes = THEMES;
+  }
   const used = new Set(challenges.map((c) => c.theme));
-  return { challenges, themes: b.themes.filter((t) => used.has(t.id)), settings: b.settings[game] ?? null, source: b.source };
+  return { challenges, themes: themes.filter((t) => used.has(t.id)), settings: b.settings[game] ?? null, source: b.source };
 }

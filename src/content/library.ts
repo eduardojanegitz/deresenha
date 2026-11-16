@@ -10,6 +10,7 @@ import type {
   RankingChallenge,
   Theme,
 } from "./types";
+import { LIMITE, LIMITE_THEMES } from "./limite.ts";
 import { TURMA_MIMICA, TURMA_NOTA_AVALIACAO, TURMA_NOTA_SECRETA, TURMA_QUEM, TURMA_THEMES } from "./turma.ts";
 
 /**
@@ -41,6 +42,8 @@ export const THEMES: Theme[] = [
   { id: "brasil", label: "Brasil" },
   { id: "geografia", label: "Geografia" },
   { id: "ciencia", label: "Ciência" },
+  // Temas do Jogo do Limite que ainda não existiam (ver ./limite.ts).
+  ...LIMITE_THEMES.filter((t) => !["cultura-pop", "esportes"].includes(t.id)),
 ];
 
 const extraLabels = new Map<string, string>();
@@ -385,6 +388,7 @@ export const CHALLENGES: Challenge[] = [
   ...TURMA_QUEM,
   ...QUEM,
   ...QUIZ,
+  ...LIMITE,
 ];
 
 /** Desafios publicados de um jogo, opcionalmente filtrados por tema. */

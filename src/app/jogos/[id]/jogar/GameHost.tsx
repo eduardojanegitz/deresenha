@@ -2,6 +2,7 @@
 
 import type { GameId } from "@/content/types";
 import { InfiltradoGame } from "@/games/infiltrado/InfiltradoGame";
+import { LimiteGame } from "@/games/limite/LimiteGame";
 import { MimicaGame } from "@/games/mimica/MimicaGame";
 import { NotaGame } from "@/games/nota/NotaGame";
 import { PrefereGame } from "@/games/prefere/PrefereGame";
@@ -16,6 +17,7 @@ const SCREENS: Partial<Record<GameId, React.ComponentType>> = {
   ranking: RankingGame,
   "voce-prefere": PrefereGame,
   "quem-sou-eu": QuemGame,
+  limite: LimiteGame,
 };
 
 export function GameHost({ id }: { id: GameId }) {

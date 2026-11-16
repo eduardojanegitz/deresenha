@@ -1,13 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import type { Difficulty, GameId, PublishStatus } from "@/content/types";
+import { parseGuess } from "@/engine/limite";
 import { db } from "@/server/db";
 
 /** Acesso ao banco usado só pelo painel. Toda escrita passa por validação com zod. */
 
-export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz"] as const;
+export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz", "limite"] as const;
 export type AdminGame = (typeof ADMIN_GAMES)[number];
-export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?", "quem-sou-eu": "Quem Sou Eu?", quiz: "Quiz Relâmpago" };
+export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?", "quem-sou-eu": "Quem Sou Eu?", quiz: "Quiz Relâmpago", limite: "Jogo do Limite" };
 export const STATUS_LABEL: Record<PublishStatus, string> = { published: "Publicado", draft: "Rascunho", archived: "Arquivado" };
 export const DIFF_LABEL: Record<Difficulty, string> = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
 
@@ -96,6 +97,10 @@ export const challengeSchema = z
     question: z.string().optional(),
     /** Quiz: a primeira linha é a alternativa correta. */
     options: z.string().optional(),
+    /** Jogo do Limite: o valor real, escrito como brasileiro escreve ("1.500", "2,5"). */
+    answer: z.string().optional(),
+    unit: z.string().optional(),
+    fact: z.string().optional(),
   })
   .transform((v, ctx) => {
     const issue = (message: string) => {
@@ -166,6 +171,18 @@ export const challengeSchema = z
         if (options.some((o) => o.length > 60)) return issue("Cada alternativa pode ter até 60 caracteres.");
         if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) return issue("Há alternativas repetidas.");
         data = { question: t.data, options, answer: 0 };
+        break;
+      }
+      case "limite": {
+        const t = text(5, 200, "Pergunta").safeParse(v.question ?? "");
+        if (!t.success) return issue(t.error.issues[0]!.message);
+        const answer = parseGuess(v.answer ?? "");
+        if (answer === null || answer <= 0) return issue("Escreva o valor real como número, por exemplo 8,65 ou 1.500.");
+        const unit = (v.unit ?? "").trim();
+        if (unit.length > 30) return issue("A unidade pode ter até 30 caracteres.");
+        const fact = (v.fact ?? "").trim();
+        if (fact.length > 200) return issue("A curiosidade pode ter até 200 caracteres.");
+        data = { question: t.data, answer, unit, ...(fact ? { fact } : {}) };
         break;
       }
     }

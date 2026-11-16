@@ -27,6 +27,8 @@ function dataOf(c: Challenge) {
       return { name: c.name };
     case "quiz":
       return { question: c.question, options: c.options, answer: c.answer };
+    case "limite":
+      return { question: c.question, answer: c.answer, unit: c.unit, ...(c.fact ? { fact: c.fact } : {}) };
   }
 }
 
@@ -44,8 +46,8 @@ try {
     );
     added += r.rowCount ?? 0;
   }
-  for (const g of ["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz"]) {
-    const rounds = g === "nota" ? 4 : g === "voce-prefere" ? 6 : g === "quiz" ? 8 : g === "quem-sou-eu" ? 1 : 3;
+  for (const g of ["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz", "limite"]) {
+    const rounds = g === "nota" ? 4 : g === "voce-prefere" ? 6 : g === "quiz" || g === "limite" ? 8 : g === "quem-sou-eu" ? 1 : 3;
     await client.query("insert into game_settings (game, default_rounds) values ($1, $2) on conflict (game) do nothing", [g, rounds]);
   }
   await client.query("commit");

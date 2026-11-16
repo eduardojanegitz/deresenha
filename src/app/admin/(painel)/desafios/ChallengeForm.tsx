@@ -13,6 +13,7 @@ const GAMES = [
   ["voce-prefere", "Você Prefere?"],
   ["quem-sou-eu", "Quem Sou Eu?"],
   ["quiz", "Quiz Relâmpago"],
+  ["limite", "Jogo do Limite"],
 ] as const;
 
 /** Alternativas do quiz com a correta primeiro, como o formulário espera. */
@@ -142,6 +143,32 @@ export function ChallengeForm({ initial, themes, defaultGame }: { initial: Chall
             <span className="label">Alternativas, uma por linha (2 a 4)</span>
             <textarea name="options" className="input h-auto min-h-36 py-3" defaultValue={quizLines(d)} rows={4} required />
             <span className="muted text-[13px]">Escreva a correta na primeira linha. No jogo, a ordem é embaralhada.</span>
+          </label>
+        </>
+      )}
+
+      {game === "limite" && (
+        <>
+          <label className={field}>
+            <span className="label">Pergunta</span>
+            <input name="question" className="input" defaultValue={String(d.question ?? "")} maxLength={200} placeholder="Quantos metros tinha a barba mais longa da história?" required />
+            <span className="muted text-[13px]">Algo que quase ninguém sabe de cabeça. Se o número muda com o tempo, diga o ano na pergunta.</span>
+          </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className={field}>
+              <span className="label">Valor real</span>
+              <input name="answer" className="input" inputMode="decimal" defaultValue={d.answer !== undefined ? Number(d.answer).toLocaleString("pt-BR") : ""} placeholder="5,33" required />
+            </label>
+            <label className={field}>
+              <span className="label">Unidade</span>
+              <input name="unit" className="input" defaultValue={String(d.unit ?? "")} maxLength={30} placeholder="metros" />
+              <span className="muted text-[13px]">Deixe vazio quando a resposta for um ano.</span>
+            </label>
+          </div>
+          <label className={field}>
+            <span className="label">Curiosidade (opcional)</span>
+            <input name="fact" className="input" defaultValue={String(d.fact ?? "")} maxLength={200} placeholder="A barba está guardada num museu em Washington." />
+            <span className="muted text-[13px]">Aparece junto com a resposta.</span>
           </label>
         </>
       )}

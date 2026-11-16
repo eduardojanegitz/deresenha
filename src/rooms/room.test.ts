@@ -4,12 +4,13 @@ import { RuleError, seeded } from "@/engine/core";
 import type { InfiltradoState } from "@/engine/infiltrado";
 import type { NotaState } from "@/engine/nota";
 import type { PrefereState } from "@/engine/prefere";
+import type { LimiteState } from "@/engine/limite";
 import type { QuizState } from "@/engine/quiz";
 import { createRoomState, HOST_STALE_MS, joinRoom, reduceRoom, rejoinRoom, viewRoom, type RoomAction, type RoomCtx, type RoomState } from "./room";
 
-const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado"), quiz: challengesFor("quiz"), prefere: challengesFor("voce-prefere") };
+const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado"), quiz: challengesFor("quiz"), prefere: challengesFor("voce-prefere"), limite: challengesFor("limite") };
 const ids = (g: Parameters<typeof themesFor>[0]) => themesFor(g).map((t) => t.id);
-const themes = { nota: ids("nota"), infiltrado: ids("infiltrado"), quiz: ids("quiz"), "voce-prefere": ids("voce-prefere") };
+const themes = { nota: ids("nota"), infiltrado: ids("infiltrado"), quiz: ids("quiz"), "voce-prefere": ids("voce-prefere"), limite: ids("limite") };
 const clock = 1_000_000;
 const IDS = ["a", "b", "c", "d", "e"];
 const presence = Object.fromEntries(IDS.map((id) => [id, clock]));
@@ -267,5 +268,42 @@ describe("anfitrião", () => {
     const s = act(lobby(1), "a", { type: "leave" });
     expect(s.status).toBe("closed");
     expect(() => joinRoom(s, { id: "z", nickname: "Zé", piece: "pino" }, clock)).toThrow(RuleError);
+  });
+});
+
+describe("Jogo do Limite em sala", () => {
+  const lim = (s: RoomState) => s.match!.state as LimiteState;
+  it("cada um chuta no próprio celular e revela sozinho quando todos chutam", () => {
+    let s = act(lobby(3), "a", { type: "set-game", game: "limite" });
+    s = act(s, "a", { type: "configure", limite: { rounds: 2 } });
+    s = act(s, "a", { type: "start" });
+    expect(lim(s).phase).toBe("guess");
+    const answer = lim(s).item.answer;
+    s = act(s, "b", { type: "game", action: { type: "guess", value: answer } });
+    const peek = viewRoom(s, "c", presence, clock);
+    expect(peek.match?.game === "limite" && peek.match.state.item.answer).toBeNull();
+    expect(peek.match?.game === "limite" && peek.match.state.guesses).toBeNull();
+    expect(() => act(s, "b", { type: "game", action: { type: "reveal" } })).toThrow(RuleError);
+    s = act(s, "a", { type: "game", action: { type: "guess", value: answer * 3 } });
+    s = act(s, "c", { type: "game", action: { type: "guess", value: answer * 10 } });
+    expect(lim(s).phase).toBe("reveal");
+    expect(lim(s).winners).toEqual(["b"]);
+    expect(lim(s).gained.b).toBe(4);
+    s = act(s, "a", { type: "game", action: { type: "next" } });
+    expect(lim(s).round).toBe(2);
+  });
+
+  it("quem saiu não trava a revelação e o anfitrião pode revelar antes", () => {
+    let s = act(lobby(3), "a", { type: "set-game", game: "limite" });
+    s = act(s, "a", { type: "start" });
+    s = act(s, "a", { type: "game", action: { type: "guess", value: 1 } });
+    s = act(s, "b", { type: "game", action: { type: "guess", value: 2 } });
+    s = act(s, "c", { type: "leave" });
+    expect(lim(s).phase).toBe("reveal");
+    let t = act(lobby(3), "a", { type: "set-game", game: "limite" });
+    t = act(t, "a", { type: "start" });
+    t = act(t, "b", { type: "game", action: { type: "guess", value: 5 } });
+    t = act(t, "a", { type: "game", action: { type: "reveal" } });
+    expect(lim(t).phase).toBe("reveal");
   });
 });

@@ -5,7 +5,7 @@ import { contentGameOf, customTheme, loadSets, toChallenges, type CustomSet } fr
 import { challengesFor, registerThemes, themesFor } from "./library";
 import type { Challenge, GameId, Theme } from "./types";
 
-export type Playable = Extract<GameId, "nota" | "mimica" | "infiltrado" | "ranking" | "voce-prefere" | "quem-sou-eu" | "quiz">;
+export type Playable = Extract<GameId, "nota" | "mimica" | "infiltrado" | "ranking" | "voce-prefere" | "quem-sou-eu" | "quiz" | "limite">;
 
 interface Bundle<G extends Playable> {
   challenges: Extract<Challenge, { game: G }>[];

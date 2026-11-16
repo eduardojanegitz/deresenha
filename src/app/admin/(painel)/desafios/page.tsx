@@ -9,6 +9,7 @@ function summary(c: Pick<ChallengeRow, "game" | "data">) {
   if (c.game === "voce-prefere") return `${d.a} ou ${d.b}`;
   if (c.game === "quem-sou-eu") return String(d.name ?? "");
   if (c.game === "quiz") return `${d.question} (${(d.options as string[])[Number(d.answer ?? 0)]})`;
+  if (c.game === "limite") return `${d.question} (${Number(d.answer).toLocaleString("pt-BR")} ${d.unit ?? ""})`;
   if (c.game === "ranking") return `${d.title} (${(d.items as string[]).length} itens)`;
   return String(d.text ?? "");
 }

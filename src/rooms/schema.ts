@@ -41,8 +41,14 @@ const quizAction = z.discriminatedUnion("type", [z.object({ type: z.literal("ans
 
 const prefereAction = z.discriminatedUnion("type", [z.object({ type: z.literal("choose"), choice: z.enum(["a", "b"]) }), z.object({ type: z.literal("swap") }), z.object({ type: z.literal("reveal") })]);
 
+const limiteAction = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("guess"), value: z.number().finite().min(0).max(1e13) }),
+  z.object({ type: z.literal("swap") }),
+  z.object({ type: z.literal("reveal") }),
+]);
+
 export const roomActionSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("set-game"), game: z.enum(["nota", "infiltrado", "quiz", "voce-prefere"]) }),
+  z.object({ type: z.literal("set-game"), game: z.enum(["nota", "infiltrado", "quiz", "voce-prefere", "limite"]) }),
   z.object({ type: z.literal("set-ready"), ready: z.boolean() }),
   z.object({
     type: z.literal("configure"),
@@ -60,6 +66,7 @@ export const roomActionSchema = z.discriminatedUnion("type", [
     infiltrado: z.object({ rounds: z.number().int().min(1).max(10), hintRounds: z.number().int().min(1).max(3) }).partial().optional(),
     quiz: z.object({ questions: z.number().int().min(3).max(20), seconds: z.number().int(), speed: z.boolean() }).partial().optional(),
     prefere: z.object({ rounds: z.number().int().min(1).max(20), scoreMajority: z.boolean() }).partial().optional(),
+    limite: z.object({ rounds: z.number().int().min(1).max(20) }).partial().optional(),
     themes: z.array(z.string().max(40)).max(30).optional(),
   }),
   z.object({ type: z.literal("start") }),
@@ -70,7 +77,7 @@ export const roomActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("time-up") }),
   z.object({ type: z.literal("back-to-lobby") }),
   z.object({ type: z.literal("close") }),
-  z.object({ type: z.literal("game"), action: z.union([notaAction, infiltradoAction, quizAction, prefereAction]) }),
+  z.object({ type: z.literal("game"), action: z.union([notaAction, infiltradoAction, quizAction, prefereAction, limiteAction]) }),
 ]);
 
 export const actionBody = z.object({

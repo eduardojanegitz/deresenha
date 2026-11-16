@@ -4,7 +4,7 @@
  * status de publicação e idioma. O motor só recebe desafios publicados.
  */
 
-export type GameId = "nota" | "mimica" | "infiltrado" | "ranking" | "quem-sou-eu" | "voce-prefere" | "quiz" | "musica";
+export type GameId = "nota" | "mimica" | "infiltrado" | "ranking" | "quem-sou-eu" | "voce-prefere" | "quiz" | "limite" | "musica";
 export type Difficulty = "facil" | "medio" | "dificil";
 export type PublishStatus = "published" | "draft" | "archived";
 
@@ -71,4 +71,13 @@ export interface QuizChallenge extends BaseChallenge {
   answer: number;
 }
 
-export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge | PrefereChallenge | QuemChallenge | QuizChallenge;
+/** Jogo do Limite: pergunta difícil de saber, o valor real, a unidade e uma curiosidade para a revelação. */
+export interface LimiteChallenge extends BaseChallenge {
+  game: "limite";
+  question: string;
+  answer: number;
+  unit: string;
+  fact?: string;
+}
+
+export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge | PrefereChallenge | QuemChallenge | QuizChallenge | LimiteChallenge;

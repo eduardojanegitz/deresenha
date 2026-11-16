@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Piece } from "@/brand/Piece";
 import { themeLabel } from "@/content/library";
+import { sortLimiteThemes } from "@/content/limite";
 import { useGameContent } from "@/content/useGameContent";
 import { PIECE_KINDS, type PieceKind, type Player } from "@/engine/core";
 import { guessersOf } from "@/engine/nota";
@@ -13,6 +14,7 @@ import { EndPhase, RevealPhase } from "@/games/nota/NotaGame";
 import { useRoom } from "@/rooms/client";
 import { minPlayersFor, ROOM_GAMES, type RoomGame, type RoomMatchView, type RoomView } from "@/rooms/room";
 import { InfiltradoRoom } from "./InfiltradoRoom";
+import { LimiteRoom } from "./LimiteRoom";
 import { PrefereRoom } from "./PrefereRoom";
 import { QuizRoom } from "./QuizRoom";
 
@@ -20,8 +22,8 @@ import { ChipGroup, ErrorNote, NumberPad, PhaseStage, Progress, PromptCard, Scor
 import { useSound } from "@/ui/sound";
 import { PiecePicker } from "../PiecePicker";
 
-const GAME_NAME: Record<RoomGame, string> = { nota: "Jogo da Nota", infiltrado: "Infiltrado", quiz: "Quiz Relâmpago", "voce-prefere": "Você Prefere?" };
-const GAME_PIECE: Record<RoomGame, PieceKind> = { nota: "tijolo", infiltrado: "pino", quiz: "capsula", "voce-prefere": "bolota" };
+const GAME_NAME: Record<RoomGame, string> = { nota: "Jogo da Nota", infiltrado: "Infiltrado", quiz: "Quiz Relâmpago", "voce-prefere": "Você Prefere?", limite: "Jogo do Limite" };
+const GAME_PIECE: Record<RoomGame, PieceKind> = { nota: "tijolo", infiltrado: "pino", quiz: "capsula", "voce-prefere": "bolota", limite: "meialua" };
 
 export type Room = ReturnType<typeof useRoom>;
 
@@ -46,6 +48,8 @@ export function RoomScreen({ code }: { code: string }) {
         <QuizRoom view={view} room={room} />
       ) : view.match.game === "voce-prefere" ? (
         <PrefereRoom view={view} room={room} />
+      ) : view.match.game === "limite" ? (
+        <LimiteRoom view={view} room={room} />
       ) : (
         <InfiltradoRoom view={view} room={room} />
       )}
@@ -215,6 +219,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
   const infContent = useGameContent("infiltrado");
   const quizContent = useGameContent("quiz");
   const prefContent = useGameContent("voce-prefere");
+  const limContent = useGameContent("limite");
   const allThemes = useMemo(() => {
     const ids = (kind: "secreta" | "avaliacao") => {
       const used = new Set(notaContent.challenges.filter((c) => c.kind === kind).map((c) => c.theme));
@@ -222,12 +227,13 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
     };
     // Temas da turma ficam no aparelho e não chegam ao servidor: em sala, só os oficiais.
     const official = (list: { id: string }[]) => list.map((t) => t.id).filter((id) => !id.startsWith("meu-"));
-    return { secreta: official(ids("secreta").map((id) => ({ id }))), avaliacao: official(ids("avaliacao").map((id) => ({ id }))), infiltrado: official(infContent.themes), quiz: official(quizContent.themes), "voce-prefere": official(prefContent.themes) };
-  }, [notaContent.challenges, notaContent.themes, infContent.themes, quizContent.themes, prefContent.themes]);
+    return { secreta: official(ids("secreta").map((id) => ({ id }))), avaliacao: official(ids("avaliacao").map((id) => ({ id }))), infiltrado: official(infContent.themes), quiz: official(quizContent.themes), "voce-prefere": official(prefContent.themes), limite: sortLimiteThemes(official(limContent.themes)) };
+  }, [notaContent.challenges, notaContent.themes, infContent.themes, quizContent.themes, prefContent.themes, limContent.themes]);
   const nc = view.config.nota;
   const ic = view.config.infiltrado;
   const qc = view.config.quiz;
   const pc = view.config.prefere;
+  const lc = view.config.limite;
   const gameThemes = view.game === "nota" ? allThemes[nc.mode] : allThemes[view.game];
   const current = view.themes[view.game];
   const selected = current.filter((t) => gameThemes.includes(t));
@@ -348,6 +354,8 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
                 Dar 1 ponto para quem ficar com a maioria
               </Toggle>
             </>
+          ) : view.game === "limite" ? (
+            <Stepper label="Perguntas" value={lc.rounds} min={1} max={20} onChange={(rounds) => room.act({ type: "configure", limite: { rounds } }, { quiet: true })} />
           ) : view.game === "quiz" ? (
             <>
               <Stepper label="Perguntas" value={qc.questions} min={3} max={20} onChange={(questions) => room.act({ type: "configure", quiz: { questions } }, { quiet: true })} />
@@ -379,6 +387,8 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
                   ? `${qc.questions} perguntas, ${qc.seconds} s cada${qc.speed ? ", rapidez conta pontos" : ""}`
                   : view.game === "voce-prefere"
                     ? `${pc.rounds} ${pc.rounds === 1 ? "dilema" : "dilemas"}${pc.scoreMajority ? ", ficar com a maioria pontua" : ""}`
+                  : view.game === "limite"
+                    ? `${lc.rounds} ${lc.rounds === 1 ? "pergunta" : "perguntas"}, quem chegar mais perto leva`
                   : `${ic.rounds} ${ic.rounds === 1 ? "rodada" : "rodadas"}, ${ic.hintRounds} ${ic.hintRounds === 1 ? "volta" : "voltas"} de dicas`}
               . Temas: {selected.map(themeLabel).join(", ")}.
             </span>
