@@ -11,6 +11,7 @@ import type {
   Theme,
 } from "./types";
 import { LIMITE, LIMITE_THEMES } from "./limite.ts";
+import { MENTIRA, MENTIRA_THEMES } from "./mentira.ts";
 import { TURMA_MIMICA, TURMA_NOTA_AVALIACAO, TURMA_NOTA_SECRETA, TURMA_QUEM, TURMA_THEMES } from "./turma.ts";
 
 /**
@@ -44,6 +45,8 @@ export const THEMES: Theme[] = [
   { id: "ciencia", label: "Ciência" },
   // Temas do Jogo do Limite que ainda não existiam (ver ./limite.ts).
   ...LIMITE_THEMES.filter((t) => !["cultura-pop", "esportes"].includes(t.id)),
+  // Temas da Mentira Sincera que ainda não existiam (ver ./mentira.ts).
+  ...MENTIRA_THEMES.filter((t) => !TURMA_THEMES.some((x) => x.id === t.id)),
 ];
 
 const extraLabels = new Map<string, string>();
@@ -389,6 +392,7 @@ export const CHALLENGES: Challenge[] = [
   ...QUEM,
   ...QUIZ,
   ...LIMITE,
+  ...MENTIRA,
 ];
 
 /** Desafios publicados de um jogo, opcionalmente filtrados por tema. */

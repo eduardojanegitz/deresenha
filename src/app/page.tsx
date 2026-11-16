@@ -90,7 +90,7 @@ export default function Home() {
 
       <nav className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Atalhos">
         {[
-          { href: "/jogos", title: "Todos os jogos", text: "Oito jogos prontos, da Mímica ao Jogo do Limite.", piece: "pino" as const },
+          { href: "/jogos", title: "Todos os jogos", text: "Nove jogos prontos, da Mímica à Mentira Sincera.", piece: "pino" as const },
           { href: "/temas", title: "Meus temas", text: "Desafios com as histórias da sua turma.", piece: "bolota" as const },
           { href: "/historico", title: "Histórico", text: "Partidas e quem mais ganhou neste aparelho.", piece: "tijolo" as const },
         ].map((l) => (

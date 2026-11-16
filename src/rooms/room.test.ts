@@ -5,12 +5,13 @@ import type { InfiltradoState } from "@/engine/infiltrado";
 import type { NotaState } from "@/engine/nota";
 import type { PrefereState } from "@/engine/prefere";
 import type { LimiteState } from "@/engine/limite";
+import type { MentiraState } from "@/engine/mentira";
 import type { QuizState } from "@/engine/quiz";
 import { createRoomState, HOST_STALE_MS, joinRoom, reduceRoom, rejoinRoom, viewRoom, type RoomAction, type RoomCtx, type RoomState } from "./room";
 
-const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado"), quiz: challengesFor("quiz"), prefere: challengesFor("voce-prefere"), limite: challengesFor("limite") };
+const pools = { nota: challengesFor("nota"), infiltrado: challengesFor("infiltrado"), quiz: challengesFor("quiz"), prefere: challengesFor("voce-prefere"), limite: challengesFor("limite"), mentira: challengesFor("mentira") };
 const ids = (g: Parameters<typeof themesFor>[0]) => themesFor(g).map((t) => t.id);
-const themes = { nota: ids("nota"), infiltrado: ids("infiltrado"), quiz: ids("quiz"), "voce-prefere": ids("voce-prefere"), limite: ids("limite") };
+const themes = { nota: ids("nota"), infiltrado: ids("infiltrado"), quiz: ids("quiz"), "voce-prefere": ids("voce-prefere"), limite: ids("limite"), mentira: ids("mentira") };
 const clock = 1_000_000;
 const IDS = ["a", "b", "c", "d", "e"];
 const presence = Object.fromEntries(IDS.map((id) => [id, clock]));
@@ -305,5 +306,36 @@ describe("Jogo do Limite em sala", () => {
     t = act(t, "b", { type: "game", action: { type: "guess", value: 5 } });
     t = act(t, "a", { type: "game", action: { type: "reveal" } });
     expect(lim(t).phase).toBe("reveal");
+  });
+});
+
+describe("Mentira Sincera em sala", () => {
+  const men = (s: RoomState) => s.match!.state as MentiraState;
+  it("só quem conta vê a missão, a turma vota no próprio celular e revela sozinho", () => {
+    let s = act(lobby(4), "a", { type: "set-game", game: "mentira" });
+    s = act(s, "a", { type: "start" });
+    const teller = men(s).tellerId;
+    const voters = IDS.slice(0, 4).filter((id) => id !== teller);
+    expect(() => act(s, voters[0]!, { type: "game", action: { type: "start-telling" } })).toThrow(RuleError);
+    const peek = viewRoom(s, voters[0]!, presence, clock);
+    expect(peek.match?.game === "mentira" && peek.match.state.truth).toBeNull();
+    s = act(s, teller, { type: "game", action: { type: "seen" } });
+    s = act(s, teller, { type: "game", action: { type: "start-telling" } });
+    s = act(s, teller, { type: "game", action: { type: "open-vote" } });
+    for (const v of voters) s = act(s, v, { type: "game", action: { type: "choose", choice: "verdade" } });
+    expect(men(s).phase).toBe("reveal");
+    const right = men(s).truth;
+    expect(men(s).gained[teller]).toBe(right ? 0 : 3);
+  });
+
+  it("se quem conta sai, a vez dele termina sem pontos", () => {
+    let s = act(lobby(4), "a", { type: "set-game", game: "mentira" });
+    s = act(s, "a", { type: "start" });
+    const teller = men(s).tellerId;
+    s = act(s, teller, { type: "leave" });
+    expect(men(s).phase).toBe("reveal");
+    const host = s.hostId;
+    s = act(s, host, { type: "game", action: { type: "next" } });
+    expect(men(s).round).toBe(2);
   });
 });

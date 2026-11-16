@@ -6,9 +6,9 @@ import { db } from "@/server/db";
 
 /** Acesso ao banco usado só pelo painel. Toda escrita passa por validação com zod. */
 
-export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz", "limite"] as const;
+export const ADMIN_GAMES = ["nota", "mimica", "infiltrado", "ranking", "voce-prefere", "quem-sou-eu", "quiz", "limite", "mentira"] as const;
 export type AdminGame = (typeof ADMIN_GAMES)[number];
-export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?", "quem-sou-eu": "Quem Sou Eu?", quiz: "Quiz Relâmpago", limite: "Jogo do Limite" };
+export const GAME_LABEL: Record<AdminGame, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?", "quem-sou-eu": "Quem Sou Eu?", quiz: "Quiz Relâmpago", limite: "Jogo do Limite", mentira: "Mentira Sincera" };
 export const STATUS_LABEL: Record<PublishStatus, string> = { published: "Publicado", draft: "Rascunho", archived: "Arquivado" };
 export const DIFF_LABEL: Record<Difficulty, string> = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
 
@@ -171,6 +171,12 @@ export const challengeSchema = z
         if (options.some((o) => o.length > 60)) return issue("Cada alternativa pode ter até 60 caracteres.");
         if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) return issue("Há alternativas repetidas.");
         data = { question: t.data, options, answer: 0 };
+        break;
+      }
+      case "mentira": {
+        const t = text(5, 140, "Pergunta").safeParse(v.text ?? "");
+        if (!t.success) return issue(t.error.issues[0]!.message);
+        data = { text: t.data };
         break;
       }
       case "limite": {

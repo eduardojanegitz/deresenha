@@ -4,7 +4,7 @@
  * status de publicação e idioma. O motor só recebe desafios publicados.
  */
 
-export type GameId = "nota" | "mimica" | "infiltrado" | "ranking" | "quem-sou-eu" | "voce-prefere" | "quiz" | "limite" | "musica";
+export type GameId = "nota" | "mimica" | "infiltrado" | "ranking" | "quem-sou-eu" | "voce-prefere" | "quiz" | "limite" | "mentira" | "musica";
 export type Difficulty = "facil" | "medio" | "dificil";
 export type PublishStatus = "published" | "draft" | "archived";
 
@@ -71,6 +71,12 @@ export interface QuizChallenge extends BaseChallenge {
   answer: number;
 }
 
+/** Mentira Sincera: uma pergunta pessoal que funciona para contar verdade ou inventar. */
+export interface MentiraChallenge extends BaseChallenge {
+  game: "mentira";
+  text: string;
+}
+
 /** Jogo do Limite: pergunta difícil de saber, o valor real, a unidade e uma curiosidade para a revelação. */
 export interface LimiteChallenge extends BaseChallenge {
   game: "limite";
@@ -80,4 +86,4 @@ export interface LimiteChallenge extends BaseChallenge {
   fact?: string;
 }
 
-export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge | PrefereChallenge | QuemChallenge | QuizChallenge | LimiteChallenge;
+export type Challenge = NotaChallenge | MimicaChallenge | InfiltradoChallenge | RankingChallenge | PrefereChallenge | QuemChallenge | QuizChallenge | LimiteChallenge | MentiraChallenge;

@@ -15,6 +15,7 @@ describe("conteúdo embutido", () => {
       if (c.game === "nota") expect(c.text.length, c.id).toBeLessThanOrEqual(140);
       if (c.game === "mimica") expect(c.text.length, c.id).toBeLessThanOrEqual(60);
       if (c.game === "quem-sou-eu") expect(c.name.length, c.id).toBeLessThanOrEqual(40);
+      if (c.game === "mentira") expect(c.text.length, c.id).toBeLessThanOrEqual(140);
       if (c.game === "limite") {
         expect(c.question.length, c.id).toBeLessThanOrEqual(200);
         expect(c.unit.length, c.id).toBeLessThanOrEqual(30);
@@ -34,6 +35,9 @@ describe("conteúdo embutido", () => {
     }
     for (const t of ["recordes", "corpo", "bichos", "comilanca", "brasil-numeros", "espaco", "contas-da-vida", "mundo", "cultura-pop", "esportes"]) {
       expect(count("limite", t), `limite ${t}`).toBeGreaterThanOrEqual(8);
+    }
+    for (const t of ["micos", "confissoes", "role", "perrengue", "infancia", "familia", "amor", "trampo", "viagem"]) {
+      expect(count("mentira", t), `mentira ${t}`).toBeGreaterThanOrEqual(8);
     }
     for (const t of ["tipos", "tv", "brasilidades", "festas", "infancia", "internet", "praia"]) {
       expect(count("quem-sou-eu", t), `quem ${t}`).toBeGreaterThanOrEqual(10);

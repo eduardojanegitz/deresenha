@@ -6,7 +6,7 @@ import { Piece } from "@/brand/Piece";
 import { clearHistory, computeStats, loadHistory, winnersOf, type MatchRecord } from "@/history/history";
 import { Sheet } from "@/ui/play";
 
-const GAME_NAME: Record<string, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?", "quem-sou-eu": "Quem Sou Eu?", quiz: "Quiz Relâmpago", limite: "Jogo do Limite" };
+const GAME_NAME: Record<string, string> = { nota: "Jogo da Nota", mimica: "Mímica", infiltrado: "Infiltrado", ranking: "Ranking às Cegas", "voce-prefere": "Você Prefere?", "quem-sou-eu": "Quem Sou Eu?", quiz: "Quiz Relâmpago", limite: "Jogo do Limite", mentira: "Mentira Sincera" };
 const gameName = (g: string) => GAME_NAME[g] ?? g;
 
 export function History() {

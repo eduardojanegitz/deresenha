@@ -9,6 +9,7 @@ import { addChampionship } from "@/engine/championship";
 import type { Player } from "@/engine/core";
 import { DEFAULT_INFILTRADO_CONFIG, INFILTRADO_MIN } from "@/engine/infiltrado";
 import { DEFAULT_LIMITE_CONFIG } from "@/engine/limite";
+import { DEFAULT_MENTIRA_CONFIG, MENTIRA_MIN } from "@/engine/mentira";
 import { DEFAULT_MIMICA_CONFIG } from "@/engine/mimica";
 import { DEFAULT_NOTA_CONFIG } from "@/engine/nota";
 import { DEFAULT_PREFERE_CONFIG } from "@/engine/prefere";
@@ -16,6 +17,7 @@ import { DEFAULT_QUEM_CONFIG } from "@/engine/quem";
 import { DEFAULT_RANKING_CONFIG } from "@/engine/ranking";
 import { InfiltradoMatch } from "@/games/infiltrado/InfiltradoGame";
 import { LimiteMatch } from "@/games/limite/LimiteGame";
+import { MentiraMatch } from "@/games/mentira/MentiraGame";
 import { MimicaMatch } from "@/games/mimica/MimicaGame";
 import { NotaMatch } from "@/games/nota/NotaGame";
 import { PrefereMatch } from "@/games/prefere/PrefereGame";
@@ -31,7 +33,7 @@ import { useSound } from "@/ui/sound";
  * Cada jogo vira 0–100 pontos relativos ao melhor da partida (pontuação normalizada),
  * para que jogos com números grandes não pesem mais que os outros.
  */
-type Stage = "nota" | "mimica" | "infiltrado" | "voce-prefere" | "quem-sou-eu" | "limite" | "ranking";
+type Stage = "nota" | "mimica" | "infiltrado" | "voce-prefere" | "quem-sou-eu" | "limite" | "mentira" | "ranking";
 const STAGES: { id: Stage; name: string; piece: Player["piece"]; min: number; scored: boolean; note: string }[] = [
   { id: "nota", name: "Nota Secreta", piece: "tijolo", min: 3, scored: true, note: "Cada um pensa uma vez por rodada." },
   { id: "mimica", name: "Mímica", piece: "capsula", min: 2, scored: true, note: "Cada um por si." },
@@ -39,6 +41,7 @@ const STAGES: { id: Stage; name: string; piece: Player["piece"]; min: number; sc
   { id: "voce-prefere", name: "Você Prefere?", piece: "bolota", min: 2, scored: true, note: "Ficar com a maioria pontua." },
   { id: "quem-sou-eu", name: "Quem Sou Eu?", piece: "bolota", min: 2, scored: true, note: "Cada um adivinha uma vez." },
   { id: "limite", name: "Jogo do Limite", piece: "meialua", min: 2, scored: true, note: "Quem chega mais perto do valor real pontua." },
+  { id: "mentira", name: "Mentira Sincera", piece: "pino", min: MENTIRA_MIN, scored: true, note: "Cada um conta uma história." },
   { id: "ranking", name: "Ranking às Cegas", piece: "meialua", min: 1, scored: false, note: "Só para rir: não conta pontos." },
 ];
 const stageOf = (id: Stage) => STAGES.find((s) => s.id === id)!;
@@ -63,6 +66,7 @@ export function NightGame() {
   const quem = useGameContent("quem-sou-eu");
   const ranking = useGameContent("ranking");
   const limite = useGameContent("limite");
+  const mentira = useGameContent("mentira");
 
   const toggle = (id: Stage) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const invalid = picked.find((id) => names.length < stageOf(id).min);
@@ -155,6 +159,8 @@ export function NightGame() {
       return <QuemMatch key={k} {...common} config={{ ...DEFAULT_QUEM_CONFIG, rounds: 1 }} pool={by(quem.challenges)} />;
     case "limite":
       return <LimiteMatch key={k} {...common} config={{ ...DEFAULT_LIMITE_CONFIG, rounds: rounds * 2 }} pool={by(limite.challenges)} />;
+    case "mentira":
+      return <MentiraMatch key={k} {...common} config={{ ...DEFAULT_MENTIRA_CONFIG, turns: 1 }} pool={by(mentira.challenges)} />;
     case "ranking":
       return <RankingMatch key={k} {...common} config={{ ...DEFAULT_RANKING_CONFIG, rounds: Math.min(rounds, run.players.length) }} pool={by(ranking.challenges)} />;
   }

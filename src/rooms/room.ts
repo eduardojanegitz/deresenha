@@ -4,9 +4,9 @@
  * (todo mundo respondeu, tempo acabou) e o que cada participante pode ver.
  * O servidor só carrega/salva este estado; nenhuma regra mora no cliente ou no banco.
  *
- * Cada jogo jogável em sala tem um bloco próprio aqui (Jogo da Nota, Infiltrado, Quiz, Você Prefere?, Limite).
+ * Cada jogo jogável em sala tem um bloco próprio aqui (Jogo da Nota, Infiltrado, Quiz, Você Prefere?, Limite, Mentira Sincera).
  */
-import type { InfiltradoChallenge, LimiteChallenge, NotaChallenge, PrefereChallenge, QuizChallenge } from "@/content/types";
+import type { InfiltradoChallenge, LimiteChallenge, MentiraChallenge, NotaChallenge, PrefereChallenge, QuizChallenge } from "@/content/types";
 import { assertRule, PIECE_KINDS, type PieceKind, type Player, type Rng } from "@/engine/core";
 import {
   createInfiltrado,
@@ -19,6 +19,7 @@ import {
   type InfiltradoView,
 } from "@/engine/infiltrado";
 import { createLimite, DEFAULT_LIMITE_CONFIG, LIMITE_MIN, reduceLimite, viewLimiteFor, type LimiteConfig, type LimiteState, type LimiteView } from "@/engine/limite";
+import { createMentira, DEFAULT_MENTIRA_CONFIG, MENTIRA_MIN, reduceMentira, viewMentiraFor, votersOf, type MentiraConfig, type MentiraState, type MentiraView, type MentiraVote } from "@/engine/mentira";
 import { createNota, DEFAULT_NOTA_CONFIG, guessersOf, MIN_PLAYERS, reduceNota, viewNotaFor, type NotaConfig, type NotaState } from "@/engine/nota";
 import { createPrefere, DEFAULT_PREFERE_CONFIG, PREFERE_MIN, reducePrefere, viewPrefereFor, type PrefereConfig, type PrefereState, type PrefereView } from "@/engine/prefere";
 import { createQuiz, DEFAULT_QUIZ_CONFIG, QUIZ_GRACE_MS, QUIZ_MIN, QUIZ_SECONDS_OPTIONS, quizLimitMs, reduceQuiz, viewQuizFor, type QuizConfig, type QuizState, type QuizView } from "@/engine/quiz";
@@ -29,8 +30,8 @@ export const ONLINE_WINDOW_MS = 20_000;
 /** Anfitrião sem sinal por mais que isso pode ter o comando assumido por outra pessoa. */
 export const HOST_STALE_MS = 45_000;
 
-export type RoomGame = "nota" | "infiltrado" | "quiz" | "voce-prefere" | "limite";
-export const ROOM_GAMES: RoomGame[] = ["nota", "infiltrado", "quiz", "voce-prefere", "limite"];
+export type RoomGame = "nota" | "infiltrado" | "quiz" | "voce-prefere" | "limite" | "mentira";
+export const ROOM_GAMES: RoomGame[] = ["nota", "infiltrado", "quiz", "voce-prefere", "limite", "mentira"];
 
 export interface RoomPlayer {
   id: string;
@@ -44,7 +45,8 @@ export interface RoomPlayer {
 export type RoomStatus = "lobby" | "playing" | "ended" | "closed";
 
 export type RoomMatch = { game: "nota"; state: NotaState } | { game: "infiltrado"; state: InfiltradoState } | { game: "quiz"; state: QuizState } | { game: "voce-prefere"; state: PrefereState }
-  | { game: "limite"; state: LimiteState };
+  | { game: "limite"; state: LimiteState }
+  | { game: "mentira"; state: MentiraState };
 
 export interface RoomState {
   code: string;
@@ -52,7 +54,7 @@ export interface RoomState {
   status: RoomStatus;
   hostId: string;
   players: RoomPlayer[];
-  config: { nota: NotaConfig; infiltrado: InfiltradoConfig; quiz: QuizConfig; prefere: PrefereConfig; limite: LimiteConfig };
+  config: { nota: NotaConfig; infiltrado: InfiltradoConfig; quiz: QuizConfig; prefere: PrefereConfig; limite: LimiteConfig; mentira: MentiraConfig };
   themes: Record<RoomGame, string[]>;
   match: RoomMatch | null;
   /** Prazo da fase atual (epoch ms), controlado pelo servidor. */
@@ -73,6 +75,7 @@ export type InfiltradoRoomAction = { type: "seen" } | { type: "next-hint-round" 
 export type QuizRoomAction = { type: "answer"; choice: number } | { type: "close" } | { type: "next" };
 export type PrefereRoomAction = { type: "choose"; choice: "a" | "b" } | { type: "swap" } | { type: "reveal" } | { type: "next" };
 export type LimiteRoomAction = { type: "guess"; value: number } | { type: "swap" } | { type: "reveal" } | { type: "next" };
+export type MentiraRoomAction = { type: "seen" } | { type: "swap" } | { type: "start-telling" } | { type: "open-vote" } | { type: "choose"; choice: MentiraVote } | { type: "reveal" } | { type: "next" };
 
 export type RoomAction =
   | { type: "set-ready"; ready: boolean }
@@ -84,6 +87,7 @@ export type RoomAction =
       quiz?: Partial<QuizConfig>;
       prefere?: Partial<PrefereConfig>;
       limite?: Partial<LimiteConfig>;
+      mentira?: Partial<MentiraConfig>;
       themes?: string[];
     }
   | { type: "start" }
@@ -94,7 +98,7 @@ export type RoomAction =
   | { type: "time-up" }
   | { type: "back-to-lobby" }
   | { type: "close" }
-  | { type: "game"; action: NotaRoomAction | InfiltradoRoomAction | QuizRoomAction | PrefereRoomAction | LimiteRoomAction };
+  | { type: "game"; action: NotaRoomAction | InfiltradoRoomAction | QuizRoomAction | PrefereRoomAction | LimiteRoomAction | MentiraRoomAction };
 
 export interface RoomPools {
   nota: readonly NotaChallenge[];
@@ -102,6 +106,7 @@ export interface RoomPools {
   quiz: readonly QuizChallenge[];
   prefere: readonly PrefereChallenge[];
   limite: readonly LimiteChallenge[];
+  mentira: readonly MentiraChallenge[];
 }
 
 export interface RoomCtx {
@@ -121,7 +126,7 @@ export function createRoomState(code: string, host: { id: string; nickname: stri
     status: "lobby",
     hostId: host.id,
     players: [{ ...host, joinedAt: now, ready: true, left: false }],
-    config: { nota: { ...DEFAULT_NOTA_CONFIG }, infiltrado: { ...DEFAULT_INFILTRADO_CONFIG }, quiz: { ...DEFAULT_QUIZ_CONFIG }, prefere: { ...DEFAULT_PREFERE_CONFIG }, limite: { ...DEFAULT_LIMITE_CONFIG } },
+    config: { nota: { ...DEFAULT_NOTA_CONFIG }, infiltrado: { ...DEFAULT_INFILTRADO_CONFIG }, quiz: { ...DEFAULT_QUIZ_CONFIG }, prefere: { ...DEFAULT_PREFERE_CONFIG }, limite: { ...DEFAULT_LIMITE_CONFIG }, mentira: { ...DEFAULT_MENTIRA_CONFIG } },
     themes,
     match: null,
     deadline: null,
@@ -131,11 +136,11 @@ export function createRoomState(code: string, host: { id: string; nickname: stri
 export const activePlayers = (s: RoomState) => s.players.filter((p) => !p.left);
 export const normalizeNickname = (raw: string) => raw.trim().replace(/\s+/g, " ");
 export const minPlayersFor = (s: Pick<RoomState, "game" | "config">) =>
-  s.game === "nota" ? MIN_PLAYERS[s.config.nota.mode] : s.game === "quiz" ? QUIZ_MIN : s.game === "voce-prefere" ? PREFERE_MIN : s.game === "limite" ? LIMITE_MIN : INFILTRADO_MIN;
+  s.game === "nota" ? MIN_PLAYERS[s.config.nota.mode] : s.game === "quiz" ? QUIZ_MIN : s.game === "voce-prefere" ? PREFERE_MIN : s.game === "limite" ? LIMITE_MIN : s.game === "mentira" ? MENTIRA_MIN : INFILTRADO_MIN;
 
 /** Salas criadas antes de um jogo existir não têm a configuração dele. */
 export const withDefaults = (s: RoomState): RoomState =>
-  s.config.quiz && s.config.prefere && s.config.limite && s.themes.quiz && s.themes["voce-prefere"] && s.themes.limite
+  s.config.quiz && s.config.prefere && s.config.limite && s.config.mentira && s.themes.quiz && s.themes["voce-prefere"] && s.themes.limite && s.themes.mentira
     ? s
     : {
         ...s,
@@ -144,8 +149,9 @@ export const withDefaults = (s: RoomState): RoomState =>
           quiz: s.config.quiz ?? { ...DEFAULT_QUIZ_CONFIG },
           prefere: s.config.prefere ?? { ...DEFAULT_PREFERE_CONFIG },
           limite: s.config.limite ?? { ...DEFAULT_LIMITE_CONFIG },
+          mentira: s.config.mentira ?? { ...DEFAULT_MENTIRA_CONFIG },
         },
-        themes: { ...s.themes, quiz: s.themes.quiz ?? [], "voce-prefere": s.themes["voce-prefere"] ?? [], limite: s.themes.limite ?? [] },
+        themes: { ...s.themes, quiz: s.themes.quiz ?? [], "voce-prefere": s.themes["voce-prefere"] ?? [], limite: s.themes.limite ?? [], mentira: s.themes.mentira ?? [] },
       };
 
 /** Entrada de alguém novo. Reentrada (mesmo token) usa `rejoinRoom`. */
@@ -409,6 +415,53 @@ function applyLimite(s: RoomState, m: LimiteState, actorId: string, a: LimiteRoo
   }
 }
 
+/* ---------- Mentira Sincera em sala ---------- */
+
+/** Revela sozinho quando todos os presentes (menos quem conta) já votaram. */
+function mentiraAuto(s: RoomState, m: MentiraState, ctx: RoomCtx): RoomState {
+  let next = m;
+  const absent = absentIds(s);
+  // Quem conta saiu antes de ver a missão: a vez passa para a frente, sem pontos.
+  if ((next.phase === "secret" || next.phase === "tell") && absent.has(next.tellerId)) {
+    next = { ...next, phase: "reveal", gained: {} };
+  }
+  if (next.phase === "vote" && Object.keys(next.votes).length > 0) {
+    const pending = votersOf(next).filter((p) => next.votes[p.id] === undefined && !absent.has(p.id));
+    if (pending.length === 0) next = reduceMentira(next, { type: "reveal", force: true }, ctx.pools.mentira, ctx.rng);
+  }
+  return { ...s, match: { game: "mentira", state: next } };
+}
+
+function applyMentira(s: RoomState, m: MentiraState, actorId: string, a: MentiraRoomAction, ctx: RoomCtx): RoomState {
+  const pool = ctx.pools.mentira;
+  const tellerOrHost = () => assertRule(actorId === m.tellerId || isHost(s, actorId), "forbidden", "Só quem conta (ou quem comanda a sala) avança daqui.");
+  switch (a.type) {
+    case "seen":
+      return mentiraAuto(s, reduceMentira(m, { type: "seen", playerId: actorId }, pool, ctx.rng), ctx);
+    case "swap":
+      // Só quem conta troca: é quem sabe se tem uma história para aquela pergunta.
+      assertRule(actorId === m.tellerId, "forbidden", "Só quem conta a história pode trocar a pergunta.");
+      return mentiraAuto(s, reduceMentira(m, { type: "swap" }, pool, ctx.rng), ctx);
+    case "start-telling":
+      assertRule(actorId === m.tellerId, "forbidden", "Quem conta a história começa quando estiver pronto.");
+      return mentiraAuto(s, reduceMentira(m, { type: "start-telling" }, pool, ctx.rng), ctx);
+    case "open-vote":
+      tellerOrHost();
+      return mentiraAuto(s, reduceMentira(m, { type: "open-vote" }, pool, ctx.rng), ctx);
+    case "choose":
+      // Cada um vota por si: o eleitor é quem está autenticado. Dá para mudar até revelar.
+      return mentiraAuto(s, reduceMentira(m, { type: "vote", playerId: actorId, choice: a.choice }, pool, ctx.rng), ctx);
+    case "reveal":
+      requireHost(s, actorId);
+      return mentiraAuto(s, reduceMentira(m, { type: "reveal", force: true }, pool, ctx.rng), ctx);
+    case "next": {
+      requireHost(s, actorId);
+      const next = reduceMentira(m, { type: "next" }, pool, ctx.rng);
+      return mentiraAuto({ ...s, status: next.phase === "end" ? "ended" : "playing" }, next, ctx);
+    }
+  }
+}
+
 /* ---------- regras gerais ---------- */
 
 function afterLeave(s: RoomState, ctx: RoomCtx): RoomState {
@@ -417,6 +470,7 @@ function afterLeave(s: RoomState, ctx: RoomCtx): RoomState {
   if (s.match.game === "quiz") return quizAuto(s, s.match.state, ctx);
   if (s.match.game === "voce-prefere") return prefereAuto(s, s.match.state, ctx);
   if (s.match.game === "limite") return limiteAuto(s, s.match.state, ctx);
+  if (s.match.game === "mentira") return mentiraAuto(s, s.match.state, ctx);
   return infiltradoAuto(s, s.match.state, ctx);
 }
 
@@ -453,9 +507,11 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
       assertRule(Number.isInteger(prefere.rounds) && prefere.rounds >= 1 && prefere.rounds <= 20, "rounds", "Escolha entre 1 e 20 rodadas.");
       const limite = { ...s.config.limite, ...a.limite };
       assertRule(Number.isInteger(limite.rounds) && limite.rounds >= 1 && limite.rounds <= 20, "rounds", "Escolha entre 1 e 20 perguntas.");
+      const mentira = { ...s.config.mentira, ...a.mentira };
+      assertRule(Number.isInteger(mentira.turns) && mentira.turns >= 1 && mentira.turns <= 3, "turns", "Cada pessoa conta de 1 a 3 histórias.");
       const themes = a.themes ?? s.themes[s.game];
       assertRule(themes.length > 0, "themes", "Escolha pelo menos um tema.");
-      return { ...s, config: { nota, infiltrado, quiz, prefere, limite }, themes: { ...s.themes, [s.game]: themes } };
+      return { ...s, config: { nota, infiltrado, quiz, prefere, limite, mentira }, themes: { ...s.themes, [s.game]: themes } };
     }
 
     case "start": {
@@ -472,6 +528,10 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
       if (s.game === "voce-prefere") {
         const match = createPrefere(s.config.prefere, players, ctx.pools.prefere.filter((c) => themes.includes(c.theme)), ctx.rng);
         return prefereAuto({ ...s, status: "playing", deadline: null }, match, ctx);
+      }
+      if (s.game === "mentira") {
+        const match = createMentira(s.config.mentira, players, ctx.pools.mentira.filter((c) => themes.includes(c.theme)), ctx.rng);
+        return mentiraAuto({ ...s, status: "playing", deadline: null }, match, ctx);
       }
       if (s.game === "limite") {
         const match = createLimite(s.config.limite, players, ctx.pools.limite.filter((c) => themes.includes(c.theme)), ctx.rng);
@@ -534,6 +594,7 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
       if (s.match.game === "quiz") return applyQuiz(s, s.match.state, actorId, a.action as QuizRoomAction, ctx);
       if (s.match.game === "voce-prefere") return applyPrefere(s, s.match.state, actorId, a.action as PrefereRoomAction, ctx);
       if (s.match.game === "limite") return applyLimite(s, s.match.state, actorId, a.action as LimiteRoomAction, ctx);
+      if (s.match.game === "mentira") return applyMentira(s, s.match.state, actorId, a.action as MentiraRoomAction, ctx);
       return applyInfiltrado(s, s.match.state, actorId, a.action as InfiltradoRoomAction, ctx);
     }
   }
@@ -542,7 +603,8 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
 /* ---------- projeção: o que cada participante recebe ---------- */
 
 export type RoomMatchView = { game: "nota"; state: NotaState; answered: string[] } | { game: "infiltrado"; state: InfiltradoView } | { game: "quiz"; state: QuizView } | { game: "voce-prefere"; state: PrefereView }
-  | { game: "limite"; state: LimiteView };
+  | { game: "limite"; state: LimiteView }
+  | { game: "mentira"; state: MentiraView };
 
 export interface RoomView {
   code: string;
@@ -566,6 +628,8 @@ export function viewRoom(raw: RoomState, viewerId: string, presence: Readonly<Re
     match = { game: "quiz", state: viewQuizFor(s.match.state, viewerId) };
   } else if (s.match?.game === "voce-prefere") {
     match = { game: "voce-prefere", state: viewPrefereFor(s.match.state, viewerId) };
+  } else if (s.match?.game === "mentira") {
+    match = { game: "mentira", state: viewMentiraFor(s.match.state, viewerId) };
   } else if (s.match?.game === "limite") {
     match = { game: "limite", state: viewLimiteFor(s.match.state, viewerId) };
   } else if (s.match?.game === "nota") {

@@ -14,6 +14,7 @@ const GAMES = [
   ["quem-sou-eu", "Quem Sou Eu?"],
   ["quiz", "Quiz Relâmpago"],
   ["limite", "Jogo do Limite"],
+  ["mentira", "Mentira Sincera"],
 ] as const;
 
 /** Alternativas do quiz com a correta primeiro, como o formulário espera. */
@@ -145,6 +146,14 @@ export function ChallengeForm({ initial, themes, defaultGame }: { initial: Chall
             <span className="muted text-[13px]">Escreva a correta na primeira linha. No jogo, a ordem é embaralhada.</span>
           </label>
         </>
+      )}
+
+      {game === "mentira" && (
+        <label className={field}>
+          <span className="label">Pergunta</span>
+          <input name="text" className="input" defaultValue={String(d.text ?? "")} maxLength={140} placeholder="Conte da vez que você passou mais vergonha em público." required />
+          <span className="muted text-[13px]">Precisa funcionar para os dois lados: quem tira verdade conta uma história real, quem tira mentira inventa uma.</span>
+        </label>
       )}
 
       {game === "limite" && (

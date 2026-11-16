@@ -47,8 +47,15 @@ const limiteAction = z.discriminatedUnion("type", [
   z.object({ type: z.literal("reveal") }),
 ]);
 
+const mentiraAction = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("seen") }),
+  z.object({ type: z.literal("start-telling") }),
+  z.object({ type: z.literal("open-vote") }),
+  z.object({ type: z.literal("choose"), choice: z.enum(["verdade", "mentira"]) }),
+]);
+
 export const roomActionSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("set-game"), game: z.enum(["nota", "infiltrado", "quiz", "voce-prefere", "limite"]) }),
+  z.object({ type: z.literal("set-game"), game: z.enum(["nota", "infiltrado", "quiz", "voce-prefere", "limite", "mentira"]) }),
   z.object({ type: z.literal("set-ready"), ready: z.boolean() }),
   z.object({
     type: z.literal("configure"),
@@ -67,6 +74,7 @@ export const roomActionSchema = z.discriminatedUnion("type", [
     quiz: z.object({ questions: z.number().int().min(3).max(20), seconds: z.number().int(), speed: z.boolean() }).partial().optional(),
     prefere: z.object({ rounds: z.number().int().min(1).max(20), scoreMajority: z.boolean() }).partial().optional(),
     limite: z.object({ rounds: z.number().int().min(1).max(20) }).partial().optional(),
+    mentira: z.object({ turns: z.number().int().min(1).max(3) }).partial().optional(),
     themes: z.array(z.string().max(40)).max(30).optional(),
   }),
   z.object({ type: z.literal("start") }),
@@ -77,7 +85,7 @@ export const roomActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("time-up") }),
   z.object({ type: z.literal("back-to-lobby") }),
   z.object({ type: z.literal("close") }),
-  z.object({ type: z.literal("game"), action: z.union([notaAction, infiltradoAction, quizAction, prefereAction, limiteAction]) }),
+  z.object({ type: z.literal("game"), action: z.union([notaAction, infiltradoAction, quizAction, prefereAction, limiteAction, mentiraAction]) }),
 ]);
 
 export const actionBody = z.object({

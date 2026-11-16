@@ -51,6 +51,8 @@ export function rowToChallenge(r: Row): Challenge | null {
       const answer = Number(d.answer);
       return options.length >= 2 && Number.isInteger(answer) && answer >= 0 && answer < options.length ? { ...base, game: "quiz", question: String(d.question ?? ""), options, answer } : null;
     }
+    case "mentira":
+      return { ...base, game: "mentira", text: String(d.text ?? "") };
     case "limite": {
       const answer = Number(d.answer);
       return Number.isFinite(answer) && answer > 0
