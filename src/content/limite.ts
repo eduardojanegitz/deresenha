@@ -17,6 +17,7 @@ export const LIMITE_THEMES: Theme[] = [
   { id: "mundo", label: "Pelo mundo" },
   { id: "cultura-pop", label: "Cultura pop" },
   { id: "esportes", label: "Esportes" },
+  { id: "tecnologia", label: "Tecnologia e internet" },
 ];
 
 /** Temas na ordem pensada para o jogo (os mais divertidos primeiro); temas de fora vão para o fim. */
