@@ -12,6 +12,7 @@ import type {
 } from "./types";
 import { LIMITE, LIMITE_THEMES } from "./limite.ts";
 import { LIMITE_EXTRA } from "./limite-extra.ts";
+import { LIMITE_RESENHA } from "./limite-resenha.ts";
 import { QUIZ_EXTRA } from "./quiz.ts";
 import { MENTIRA, MENTIRA_THEMES } from "./mentira.ts";
 import { TURMA_MIMICA, TURMA_NOTA_AVALIACAO, TURMA_NOTA_SECRETA, TURMA_QUEM, TURMA_THEMES } from "./turma.ts";
@@ -396,6 +397,7 @@ export const CHALLENGES: Challenge[] = [
   ...QUIZ_EXTRA,
   ...LIMITE,
   ...LIMITE_EXTRA,
+  ...LIMITE_RESENHA,
   ...MENTIRA,
 ];
 

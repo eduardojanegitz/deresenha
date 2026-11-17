@@ -1,4 +1,5 @@
 import type { Difficulty, LimiteChallenge, Theme } from "./types";
+import { LIMITE_RESENHA_THEMES } from "./limite-resenha.ts";
 
 /**
  * Jogo do Limite: perguntas que quase ninguém sabe de cabeça, com o valor de referência.
@@ -8,6 +9,8 @@ import type { Difficulty, LimiteChallenge, Theme } from "./types";
 
 export const LIMITE_THEMES: Theme[] = [
   { id: "recordes", label: "Recordes absurdos" },
+  // Os temas mais divertidos para a resenha vêm logo no começo (ver ./limite-resenha.ts).
+  ...LIMITE_RESENHA_THEMES,
   { id: "corpo", label: "Corpo humano bizarro" },
   { id: "bichos", label: "Bichos sem noção" },
   { id: "comilanca", label: "Comilança" },

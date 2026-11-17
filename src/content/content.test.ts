@@ -40,7 +40,7 @@ describe("conteúdo embutido", () => {
     for (const t of ["brasilidades", "role", "perrengue", "tipos", "infancia", "festas", "praia"]) {
       expect(count("mimica", t), `mímica ${t}`).toBeGreaterThanOrEqual(8);
     }
-    for (const t of ["recordes", "corpo", "bichos", "comilanca", "brasil-numeros", "espaco", "contas-da-vida", "mundo", "cultura-pop", "esportes", "tecnologia"]) {
+    for (const t of ["recordes", "corpo", "bichos", "comilanca", "brasil-numeros", "espaco", "contas-da-vida", "mundo", "cultura-pop", "esportes", "tecnologia", "historia-absurda", "nojeira", "quanto-tempo", "fortunas"]) {
       expect(count("limite", t), `limite ${t}`).toBeGreaterThanOrEqual(8);
     }
     for (const t of ["micos", "confissoes", "role", "perrengue", "infancia", "familia", "amor", "trampo", "viagem"]) {
