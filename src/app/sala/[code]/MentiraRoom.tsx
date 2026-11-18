@@ -60,11 +60,13 @@ export function MentiraRoom({ view, room }: { view: RoomView; room: Room }) {
           </div>
         </>
       ) : (
-        <div className="grid justify-items-center gap-5 pt-6 text-center">
+        <div className="grid gap-5">
           <Progress round={s.round} total={s.totalRounds} label="História" />
+          <div className="grid justify-items-center gap-5 pt-4 text-center">
           <Piece kind={teller.piece} mood="sus" size={96} alive />
           <h1 className="text-[clamp(26px,7vw,36px)]">{teller.name} está vendo a missão secreta</h1>
           <p className="muted max-w-[32ch]">Verdade ou mentira? Fique de olho na cara de {teller.name} quando a história começar.</p>
+          </div>
         </div>
       );
       break;

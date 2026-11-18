@@ -83,10 +83,10 @@ export function ErrorNote({ message }: { message: string | null }) {
 export function Progress({ round, total, label = "Rodada" }: { round: number; total: number; label?: string }) {
   return (
     <div className="flex items-center gap-2.5 text-sm font-bold text-[var(--fg-2)]">
-      <span>
+      <span className="shrink-0">
         {label} {round} de {total}
       </span>
-      <div className="flex flex-1 gap-1.5" aria-hidden="true">
+      <div className="flex min-w-0 flex-1 gap-1.5" aria-hidden="true">
         {Array.from({ length: total }, (_, i) => (
           <i key={i} className={`h-2 flex-1 rounded-full ${i < round ? "bg-[var(--color-gema)]" : "bg-[var(--line)]"}`} />
         ))}

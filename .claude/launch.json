@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "deresenha", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 }
+    { "name": "deresenha", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 },
+    { "name": "deresenha-claude", "runtimeExecutable": "npx", "runtimeArgs": ["next", "dev", "-p", "3005"], "env": { "NEXT_DIST_DIR": ".next-claude" }, "port": 3005, "autoPort": false }
   ]
 }

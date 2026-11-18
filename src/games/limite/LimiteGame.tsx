@@ -193,20 +193,21 @@ export function GuessForm({ unit, initial, onSubmit, submitLabel = "Confirmar ch
         if (value !== null && !disabled) onSubmit(value);
       }}
     >
-      <label className="grid gap-2">
+      <label className="grid min-w-0 gap-2">
         <span className="label">Seu chute{unit ? ` (em ${unit})` : ""}</span>
-        <span className="flex items-center gap-2 rounded-[20px] border-[2.5px] border-[var(--line)] bg-white px-4 focus-within:border-[var(--color-tinta)] focus-within:shadow-[0_0_0_3px_var(--color-gema)]">
+        <span className="flex min-w-0 items-center gap-2 rounded-[20px] border-[2.5px] border-[var(--line)] bg-white px-4 focus-within:border-[var(--color-tinta)] focus-within:shadow-[0_0_0_3px_var(--color-gema)]">
           <input
             ref={ref}
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
             inputMode="decimal"
+            size={1}
             autoComplete="off"
             enterKeyHint="done"
             placeholder="0"
             aria-invalid={invalid}
             aria-describedby="chute-ajuda"
-            className="num h-[68px] min-w-0 flex-1 bg-transparent text-[34px] text-[var(--color-tinta)] outline-none placeholder:text-[#b9c6bd]"
+            className="num h-[68px] w-full min-w-0 flex-1 bg-transparent text-[34px] text-[var(--color-tinta)] outline-none placeholder:text-[#b9c6bd]"
           />
           {unit && <span className="shrink-0 text-[17px] font-bold text-[var(--fg-2)]">{unit}</span>}
         </span>

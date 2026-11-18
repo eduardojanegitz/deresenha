@@ -303,7 +303,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
             ))}
           </AnimatePresence>
         </motion.ul>
-        {active.length < min && <p className="muted text-[15px]">Faltam {min - active.length} para começar. Mande o código para a turma.</p>}
+        {active.length < min && <p className="muted text-[15px]">{min - active.length === 1 ? "Falta 1 pessoa" : `Faltam ${min - active.length} pessoas`} para começar. Mande o código para a turma.</p>}
       </section>
 
       {amHost ? (

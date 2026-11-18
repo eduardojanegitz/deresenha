@@ -216,7 +216,10 @@
     padding: 0 16px;
     font: 500 17px var(--font-ui);
     color: var(--color-tinta);
+    /* Campo de texto tem largura mínima própria (uns 20 caracteres): sem isso, ele estica a
+       tela em celulares estreitos. Aqui ele ocupa o espaço que tiver e encolhe quando precisa. */
     min-width: 0;
+    width: 100%;
   }
   .input:focus-visible {
     outline: none;

@@ -148,7 +148,8 @@ export function usePip(code: string) {
   const [supported, setSupported] = useState(false);
   const [win, setWin] = useState<Window | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => setSupported(!!pipApi()), []);
+  // Só no computador: em celular e tablet a janelinha não existe ou não faz sentido.
+  useEffect(() => setSupported(!!pipApi() && window.matchMedia("(pointer: fine) and (min-width: 768px)").matches), []);
 
   const open = useCallback(async () => {
     const api = pipApi();

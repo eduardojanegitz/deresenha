@@ -13,7 +13,7 @@ export function SetupShell({ title, subtitle, children, canStart, onStart, start
     <div className="mx-auto max-w-[560px] px-4 pt-2 pb-6">
       <h1>{title}</h1>
       {subtitle && <p className="muted mt-2">{subtitle}</p>}
-      <div className="mt-8 grid gap-8">{children}</div>
+      <div className="mt-8 grid gap-8 [&>*]:min-w-0">{children}</div>
       <div className="sticky-cta">
         <button className="btn" disabled={!canStart} onClick={onStart}>
           {startLabel}

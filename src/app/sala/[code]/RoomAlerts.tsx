@@ -43,7 +43,7 @@ export function PipButton({ supported, onOpen, error }: { supported: boolean; on
   if (!supported) return null;
   return (
     <div className="mt-6 grid justify-items-center gap-2 text-center">
-      <button className="btn btn-ghost btn-small w-auto" onClick={onOpen}>
+      <button className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[15px] font-semibold whitespace-nowrap text-[var(--fg-2)] hover:bg-black/5" onClick={onOpen}>
         <PipIcon />
         Abrir numa janelinha por cima de tudo
       </button>

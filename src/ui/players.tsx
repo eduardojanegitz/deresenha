@@ -74,7 +74,7 @@ export function PlayersEditor({ names, onChange, min }: { names: string[]; onCha
         <label className="sr-only" htmlFor={`${id}-i`}>
           Nome de quem joga
         </label>
-        <input id={`${id}-i`} className="input flex-1" maxLength={16} autoComplete="off" placeholder="Nome de quem joga" value={draft} onChange={(e) => setDraft(e.target.value)} disabled={full} />
+        <input id={`${id}-i`} className="input w-full min-w-0 flex-1" size={1} maxLength={16} autoComplete="off" placeholder="Nome de quem joga" value={draft} onChange={(e) => setDraft(e.target.value)} disabled={full} />
         <button className="btn btn-ghost btn-small" type="submit" disabled={full}>
           Adicionar
         </button>
