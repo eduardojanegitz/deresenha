@@ -59,3 +59,17 @@ Também ainda não existem: service worker (offline), contas de administrador in
 - Em desenvolvimento (`npm run dev`), cada página é compilada na primeira visita, e isso leva de 1 a 3 segundos. Na versão de produção (`npm run build` e `npm start`), as páginas abrem em dezenas de milissegundos e os links são carregados antes do toque.
 - No Modo Sala, cada consulta lê sala, credencial, presença e repetição de ação numa ida só ao banco. Cada ação faz uma leitura e uma gravação. O tempo restante é a distância até o banco (Neon em us-east-2).
 - `vercel.json` fixa as funções na região `cle1` (Cleveland), a mesma do banco. Se o banco mudar de região, ajuste também esse valor.
+
+## Avisos do Modo Sala
+
+- **Alerta sonoro:** quando a partida começa, todo celular com a sala aberta toca o som de início e vibra. Com a aba em segundo plano no computador, o título da aba pisca até a pessoa voltar.
+- **Janelinha flutuante:** no Chrome e no Edge do computador, o botão "Abrir numa janelinha por cima de tudo" abre a sala numa janela que fica na frente dos outros programas (Document Picture-in-Picture). A janelinha carrega a sala num iframe (`/sala/CODIGO?janela=1`), então tem relógio e animações próprios. Celulares não permitem isso em sites.
+- **Notificação push:** no lobby, "Ativar aviso" pede permissão e inscreve o aparelho. Quando a partida começa, o servidor avisa os aparelhos inscritos (menos o de quem começou), mesmo com o DeResenha fechado. No iPhone, só funciona com o app instalado na tela inicial.
+
+Para ligar o push, crie as chaves uma vez e cadastre as três variáveis na Vercel:
+
+```bash
+npm run push:keys
+```
+
+(`npm run push:keys -- --env` grava as chaves direto no `.env` local.) Sem as chaves, o cartão de aviso some e o resto funciona igual. As inscrições ficam na tabela `room_push_subscriptions` (migração 003) e somem junto com a sala.

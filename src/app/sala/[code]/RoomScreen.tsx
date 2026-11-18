@@ -12,11 +12,13 @@ import { useGameContent } from "@/content/useGameContent";
 import { PIECE_KINDS, type PieceKind, type Player } from "@/engine/core";
 import { guessersOf } from "@/engine/nota";
 import { EndPhase, RevealPhase } from "@/games/nota/NotaGame";
+import { usePip, useStartAlert } from "@/rooms/alerts";
 import { useRoom } from "@/rooms/client";
 import { minPlayersFor, ROOM_GAMES, type RoomGame, type RoomMatchView, type RoomView } from "@/rooms/room";
 import { InfiltradoRoom } from "./InfiltradoRoom";
 import { LimiteRoom } from "./LimiteRoom";
 import { MentiraRoom } from "./MentiraRoom";
+import { PipButton, PipPlaceholder, PushCard, SoundTapBanner, useEmbedMode } from "./RoomAlerts";
 import { PrefereRoom } from "./PrefereRoom";
 import { QuizRoom } from "./QuizRoom";
 
@@ -29,9 +31,20 @@ const GAME_PIECE: Record<RoomGame, PieceKind> = { nota: "tijolo", infiltrado: "p
 
 export type Room = ReturnType<typeof useRoom>;
 
-export function RoomScreen({ code }: { code: string }) {
+/** `embed`: a sala aberta dentro da janelinha flutuante (sem barra do topo, sem novo botão de janelinha). */
+export function RoomScreen({ code, embed = false }: { code: string; embed?: boolean }) {
+  const pip = usePip(code);
+  // Com a sala na janelinha, a aba principal sai da sala (para não ficarem dois celulares virtuais).
+  if (pip.isOpen) return <PipPlaceholder code={code} onBack={pip.close} />;
+  return <RoomInner code={code} embed={embed} pip={pip} />;
+}
+
+function RoomInner({ code, embed, pip }: { code: string; embed: boolean; pip: ReturnType<typeof usePip> }) {
   const room = useRoom(code);
   const { creds, view, fatal, conn } = room;
+  const { play } = useSound();
+  useStartAlert(view, play);
+  const needsTap = useEmbedMode(embed);
 
   if (fatal) return <Gone code={code} message={fatal.message} />;
   if (creds === undefined) return <Loading />;
@@ -41,6 +54,7 @@ export function RoomScreen({ code }: { code: string }) {
 
   return (
     <div className="mx-auto max-w-[560px] px-4 pt-1 pb-16">
+      {needsTap && <SoundTapBanner />}
       <ConnectionBanner conn={conn} />
       {view.status === "lobby" || !view.match ? (
         <Lobby view={view} room={room} />
@@ -57,6 +71,7 @@ export function RoomScreen({ code }: { code: string }) {
       ) : (
         <InfiltradoRoom view={view} room={room} />
       )}
+      {!embed && <PipButton supported={pip.supported} onOpen={pip.open} error={pip.error} />}
     </div>
   );
 }
@@ -259,6 +274,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
         <p className="muted mt-1">{GAME_NAME[view.game]}{GAME_NAME[view.game].endsWith("?") ? "" : "."} {amHost ? "Você comanda a sala." : `${host?.nickname ?? "Alguém"} comanda a sala.`}</p>
       </div>
       <ShareCard code={view.code} />
+      <PushCard code={view.code} token={room.creds?.token ?? null} amHost={amHost} />
 
       <section className="grid gap-2.5" aria-label="Quem está na sala">
         <h2>Na sala ({active.length})</h2>

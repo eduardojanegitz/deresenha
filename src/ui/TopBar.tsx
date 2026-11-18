@@ -21,7 +21,7 @@ export function TopBar() {
     else router.push("/");
   };
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-1 bg-[var(--bg)] px-4 py-2.5 transition-colors" style={{ viewTransitionName: "topbar" }}>
+    <header data-topbar className="sticky top-0 z-20 flex items-center gap-1 bg-[var(--bg)] px-4 py-2.5 transition-colors" style={{ viewTransitionName: "topbar" }}>
       {path !== "/" && (
         <button onClick={back} className="grid size-11 place-items-center rounded-2xl hover:bg-black/5" aria-label="Voltar">
           <IconBack />

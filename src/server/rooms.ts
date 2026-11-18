@@ -3,7 +3,10 @@ import { RuleError, type PieceKind } from "@/engine/core";
 import { createRoomState, joinRoom, reduceRoom, rejoinRoom, viewRoom, type RoomAction, type RoomState, type RoomView } from "@/rooms/room";
 import { CODE_ALPHABET, CODE_LENGTH } from "@/rooms/schema";
 import { contentFor } from "./content";
+import { after } from "next/server";
+import { getGame } from "@/games/registry";
 import { db } from "./db";
+import { notifyRoom, pushEnabled } from "./push";
 
 /**
  * Serviço do Modo Sala: carrega o estado, aplica a regra pura (src/rooms/room.ts) e salva
@@ -94,6 +97,12 @@ async function loadContext(code: string, token: string | null, opts: { knownVers
   if (!ctx.me) throw new RoomError(401, "bad-token", "Sua entrada nesta sala não vale mais. Entre de novo com um apelido.");
   const presence = Object.fromEntries(Object.entries(ctx.presence).map(([k, v]) => [k, Number(v)]));
   return { row: { id: ctx.id, version: ctx.version, state: ctx.state, expired: false }, playerId: ctx.me, presence, dup: ctx.dup };
+}
+
+/** Confere a credencial e devolve a sala e quem é (para rotas que não mexem no jogo). */
+export async function authRoom(code: string, token: string | null) {
+  const { row, playerId } = await loadContext(code, token);
+  return { roomId: row.id, playerId };
 }
 
 function ruleToRoomError(e: unknown): never {
@@ -209,7 +218,14 @@ export async function act(code: string, token: string | null, clientActionId: st
         updated_at = now(), expires_at = now() + ${ROOM_TTL}::interval
       where id = ${row.id} and exists (select 1 from ins)
       returning version`) as { version: number }[];
-    if (rows[0]) return { version: rows[0].version, view: viewRoom(next, playerId, presence, now) };
+    if (rows[0]) {
+      // A partida começou: avisa quem pediu (notificação push), depois de responder.
+      if (row.state.status !== "playing" && next.status === "playing" && pushEnabled()) {
+        const name = getGame(next.game)?.name ?? "A partida";
+        after(() => notifyRoom(row.id, playerId, { title: "A partida começou!", body: `${name} na sala ${code}. Toque para entrar.`, url: `/sala/${code}`, tag: `sala-${code}` }));
+      }
+      return { version: rows[0].version, view: viewRoom(next, playerId, presence, now) };
+    }
     // Nada salvo: ou outra ação passou na frente (tenta de novo) ou é repetida (o laço detecta).
   }
   throw new RoomError(409, "busy", "Muita coisa ao mesmo tempo. Tente de novo.");

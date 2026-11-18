@@ -322,3 +322,8 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Sala aberta dentro da janelinha flutuante: sem a barra do topo. */
+html[data-embed] [data-topbar] {
+  display: none;
+}
