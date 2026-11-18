@@ -15,6 +15,8 @@ import { LIMITE_EXTRA } from "./limite-extra.ts";
 import { LIMITE_RESENHA } from "./limite-resenha.ts";
 import { LIMITE_MAIS } from "./limite-mais.ts";
 import { QUIZ_EXTRA } from "./quiz.ts";
+import { QUIZ_MAIS } from "./quiz-mais.ts";
+import { QUIZ_MAIS_2 } from "./quiz-mais-2.ts";
 import { MENTIRA, MENTIRA_THEMES } from "./mentira.ts";
 import { TURMA_MIMICA, TURMA_NOTA_AVALIACAO, TURMA_NOTA_SECRETA, TURMA_QUEM, TURMA_THEMES } from "./turma.ts";
 
@@ -396,6 +398,8 @@ export const CHALLENGES: Challenge[] = [
   ...QUEM,
   ...QUIZ,
   ...QUIZ_EXTRA,
+  ...QUIZ_MAIS,
+  ...QUIZ_MAIS_2,
   ...LIMITE,
   ...LIMITE_EXTRA,
   ...LIMITE_RESENHA,
