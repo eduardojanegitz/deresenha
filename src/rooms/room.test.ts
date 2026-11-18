@@ -307,6 +307,19 @@ describe("Jogo do Limite em sala", () => {
     t = act(t, "a", { type: "game", action: { type: "reveal" } });
     expect(lim(t).phase).toBe("reveal");
   });
+
+  it("a revanche na mesma sala não repete as perguntas da partida anterior", () => {
+    let s = act(lobby(3), "a", { type: "set-game", game: "limite" });
+    s = act(s, "a", { type: "configure", limite: { rounds: 5 } });
+    s = act(s, "a", { type: "start" });
+    const first = [...lim(s).used];
+    s = act(s, "a", { type: "back-to-lobby" });
+    expect(s.seen?.limite).toEqual(first);
+    for (const id of ["b", "c"]) s = act(s, id, { type: "set-ready", ready: true });
+    s = act(s, "a", { type: "start" });
+    expect(first).not.toContain(lim(s).item.id);
+    expect(lim(s).used.slice(0, first.length)).toEqual(first);
+  });
 });
 
 describe("Mentira Sincera em sala", () => {

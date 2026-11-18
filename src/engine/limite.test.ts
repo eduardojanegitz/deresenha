@@ -87,4 +87,14 @@ describe("Jogo do Limite", () => {
     expect(parseGuess("-3")).toBeNull();
     expect(parseGuess("")).toBeNull();
   });
+
+  it("partidas novas pulam o que já saiu antes e recomeçam quando sobra pouca coisa", () => {
+    const seen = pool.slice(0, pool.length - 4).map((c) => c.id);
+    const a = createLimite({ rounds: 1 }, players, pool, seeded(5), seen);
+    expect(seen).not.toContain(a.item.id);
+    expect(a.used.length).toBe(seen.length + 1);
+    // Sobram 4 inéditas, mas a partida pede 10 rodadas: começa do zero.
+    const b = createLimite({ rounds: 10 }, players, pool, seeded(5), seen);
+    expect(b.used).toEqual([b.item.id]);
+  });
 });

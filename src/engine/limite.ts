@@ -1,5 +1,5 @@
 import type { LimiteChallenge } from "@/content/types";
-import { assertRule, drawFresh, type Player, type Rng, zeroScores } from "./core";
+import { assertRule, carryUsed, drawFresh, type Player, type Rng, zeroScores } from "./core";
 
 /**
  * Jogo do Limite: aparece uma pergunta que quase ninguém sabe a resposta (o tamanho da
@@ -57,7 +57,8 @@ function begin(s: LimiteState, pool: readonly LimiteChallenge[], rng: Rng): Limi
   return { ...s, round: s.round + 1, phase: "guess", item: toItem(d.item), used: d.used, guesses: {}, gained: {}, winners: [] };
 }
 
-export function createLimite(config: LimiteConfig, players: Player[], pool: readonly LimiteChallenge[], rng: Rng): LimiteState {
+/** `seen`: ids que já saíram em partidas anteriores (no aparelho ou na sala), para não repetir. */
+export function createLimite(config: LimiteConfig, players: Player[], pool: readonly LimiteChallenge[], rng: Rng, seen: readonly string[] = []): LimiteState {
   assertRule(players.length >= LIMITE_MIN, "players", `O Jogo do Limite precisa de pelo menos ${LIMITE_MIN} pessoas.`);
   assertRule(Number.isInteger(config.rounds) && config.rounds >= 1 && config.rounds <= 20, "rounds", "Escolha entre 1 e 20 rodadas.");
   const ids = players.map((p) => p.id);
@@ -73,7 +74,7 @@ export function createLimite(config: LimiteConfig, players: Player[], pool: read
     winners: [],
     scores: zeroScores(ids),
     wins: zeroScores(ids),
-    used: [],
+    used: carryUsed(pool, seen, config.rounds + 3),
   } satisfies LimiteState;
   return begin(s, pool, rng);
 }

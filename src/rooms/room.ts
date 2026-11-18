@@ -59,6 +59,8 @@ export interface RoomState {
   match: RoomMatch | null;
   /** Prazo da fase atual (epoch ms), controlado pelo servidor. */
   deadline: number | null;
+  /** Perguntas que já saíram nas partidas desta sala, para a revanche não repetir. */
+  seen?: Partial<Record<RoomGame, string[]>>;
 }
 
 export type NotaRoomAction =
@@ -385,6 +387,12 @@ function applyPrefere(s: RoomState, m: PrefereState, actorId: string, a: Prefere
 /* ---------- Jogo do Limite em sala ---------- */
 
 /** Revela sozinho quando todos os presentes já chutaram. */
+/** Guarda os ids usados na partida que acabou (só o Jogo do Limite, por enquanto). */
+function rememberSeen(s: RoomState): RoomState["seen"] {
+  if (s.match?.game !== "limite") return s.seen;
+  return { ...s.seen, limite: s.match.state.used.slice(-500) };
+}
+
 function limiteAuto(s: RoomState, m: LimiteState, ctx: RoomCtx): RoomState {
   let next = m;
   if (next.phase === "guess" && Object.keys(next.guesses).length > 0) {
@@ -396,7 +404,10 @@ function limiteAuto(s: RoomState, m: LimiteState, ctx: RoomCtx): RoomState {
 }
 
 function applyLimite(s: RoomState, m: LimiteState, actorId: string, a: LimiteRoomAction, ctx: RoomCtx): RoomState {
-  const pool = ctx.pools.limite;
+  // Trocar e passar a pergunta respeitam os temas escolhidos no lobby.
+  const themes = s.themes.limite;
+  const inThemes = ctx.pools.limite.filter((c) => themes.includes(c.theme));
+  const pool = inThemes.length > 0 ? inThemes : ctx.pools.limite;
   switch (a.type) {
     case "guess":
       // Cada um chuta por si: quem chuta é quem está autenticado. Dá para mudar até revelar.
@@ -534,7 +545,7 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
         return mentiraAuto({ ...s, status: "playing", deadline: null }, match, ctx);
       }
       if (s.game === "limite") {
-        const match = createLimite(s.config.limite, players, ctx.pools.limite.filter((c) => themes.includes(c.theme)), ctx.rng);
+        const match = createLimite(s.config.limite, players, ctx.pools.limite.filter((c) => themes.includes(c.theme)), ctx.rng, s.seen?.limite);
         return limiteAuto({ ...s, status: "playing", deadline: null }, match, ctx);
       }
       if (s.game === "quiz") {
@@ -582,7 +593,7 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
     case "back-to-lobby":
       requireHost(s, actorId);
       assertRule(s.status === "ended" || s.status === "playing", "phase", "Já está no lobby.");
-      return { ...s, status: "lobby", match: null, deadline: null, players: s.players.filter((p) => !p.left).map((p) => ({ ...p, ready: p.id === s.hostId })) };
+      return { ...s, status: "lobby", match: null, deadline: null, seen: rememberSeen(s), players: s.players.filter((p) => !p.left).map((p) => ({ ...p, ready: p.id === s.hostId })) };
 
     case "close":
       requireHost(s, actorId);

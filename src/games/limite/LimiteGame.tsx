@@ -8,6 +8,7 @@ import { sortLimiteThemes } from "@/content/limite";
 import type { LimiteChallenge } from "@/content/types";
 import { useGameContent, useThemeIds } from "@/content/useGameContent";
 import type { Player } from "@/engine/core";
+import { loadSeen, saveSeen } from "@/history/seen";
 import {
   createLimite,
   DEFAULT_LIMITE_CONFIG,
@@ -62,7 +63,9 @@ export function LimiteGame() {
 type Step = { kind: "intro" } | { kind: "pass"; i: number } | { kind: "input"; i: number } | { kind: "done" };
 
 export function LimiteMatch({ config, players, pool, onRematch, onSetup, night }: { config: LimiteConfig; players: Player[]; pool: LimiteChallenge[]; onRematch: () => void; onSetup: () => void; night?: NightLink }) {
-  const { state: s, dispatch, error } = useEngine<LimiteState, LimiteAction>(() => createLimite(config, players, pool, Math.random), (st, a, rng) => reduceLimite(st, a, pool, rng));
+  const { state: s, dispatch, error } = useEngine<LimiteState, LimiteAction>(() => createLimite(config, players, pool, Math.random, loadSeen("limite")), (st, a, rng) => reduceLimite(st, a, pool, rng));
+  // Lembra o que já saiu neste aparelho para a próxima partida trazer perguntas novas.
+  useEffect(() => saveSeen("limite", s.used), [s.used]);
   const { play } = useSound();
   const [step, setStep] = useState<Step>({ kind: "intro" });
   useTone(s.phase === "reveal" ? "noite" : null);
