@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { modeOf } from "@/engine/infiltrado";
+import { MODE_INFO, ModePicker } from "@/games/infiltrado/InfiltradoGame";
 import { AnimatePresence, motion } from "motion/react";
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -390,6 +392,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
             </>
           ) : (
             <>
+              <ModePicker value={modeOf(ic)} onChange={(mode) => room.act({ type: "configure", infiltrado: { mode } }, { quiet: true })} />
               <Stepper label="Rodadas" value={ic.rounds} min={1} max={10} onChange={(rounds) => room.act({ type: "configure", infiltrado: { rounds } }, { quiet: true })} />
               <Stepper label="Voltas de dicas antes de votar" value={ic.hintRounds} min={1} max={3} onChange={(hintRounds) => room.act({ type: "configure", infiltrado: { hintRounds } }, { quiet: true })} />
             </>
@@ -415,7 +418,7 @@ function Lobby({ view, room }: { view: RoomView; room: Room }) {
                     ? `${mc.turns} ${mc.turns === 1 ? "história" : "histórias"} por pessoa`
                   : view.game === "limite"
                     ? `${lc.rounds} ${lc.rounds === 1 ? "pergunta" : "perguntas"}, quem chegar mais perto leva`
-                  : `${ic.rounds} ${ic.rounds === 1 ? "rodada" : "rodadas"}, ${ic.hintRounds} ${ic.hintRounds === 1 ? "volta" : "voltas"} de dicas`}
+                  : `${MODE_INFO[modeOf(ic)].label}, ${ic.rounds} ${ic.rounds === 1 ? "rodada" : "rodadas"}, ${ic.hintRounds} ${ic.hintRounds === 1 ? "volta" : "voltas"} de dicas`}
               . Temas: {selected.map(themeLabel).join(", ")}.
             </span>
           </div>

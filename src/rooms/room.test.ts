@@ -172,6 +172,44 @@ describe("Infiltrado em sala", () => {
     const after = viewRoom(s, "b", presence, clock);
     expect(after.match?.game === "infiltrado" && after.match.state.impostorId).toBe(imp);
   });
+
+  it("no modo sem palavra, o infiltrado pego chuta pelo próprio celular", () => {
+    let s = act(lobby(5), "a", { type: "set-game", game: "infiltrado" });
+    s = act(s, "a", { type: "configure", infiltrado: { mode: "sem-palavra" } });
+    s = act(s, "a", { type: "start" });
+    const imp = inf(s).impostorId;
+    const v = viewRoom(s, imp, presence, clock);
+    expect(v.match?.game === "infiltrado" && v.match.state.myWord).toBeNull();
+    expect(v.match?.game === "infiltrado" && v.match.state.iAmImpostor).toBe(true);
+    for (const id of IDS) s = act(s, id, { type: "game", action: { type: "seen" } });
+    s = act(s, "a", { type: "game", action: { type: "open-vote" } });
+    const scapegoat = IDS.find((id) => id !== imp)!;
+    for (const id of IDS) s = act(s, id, { type: "game", action: { type: "vote", targetId: id === imp ? scapegoat : imp } });
+    expect(inf(s).phase).toBe("last-guess");
+    const civil = IDS.find((id) => id !== imp && id !== "a")!;
+    expect(() => act(s, civil, { type: "game", action: { type: "last-guess", guess: "x" } })).toThrow(/Só o infiltrado/);
+    s = act(s, imp, { type: "game", action: { type: "last-guess", guess: inf(s).pair.major } });
+    expect(inf(s).result?.guessRight).toBe(true);
+  });
+
+  it("se o infiltrado pego sai da sala, a rodada não trava", () => {
+    let s = act(lobby(5), "a", { type: "set-game", game: "infiltrado" });
+    s = act(s, "a", { type: "configure", infiltrado: { mode: "sabe" } });
+    s = act(s, "a", { type: "start" });
+    const imp = inf(s).impostorId;
+    for (const id of IDS) s = act(s, id, { type: "game", action: { type: "seen" } });
+    s = act(s, "a", { type: "game", action: { type: "open-vote" } });
+    const scapegoat = IDS.find((id) => id !== imp)!;
+    for (const id of IDS) s = act(s, id, { type: "game", action: { type: "vote", targetId: id === imp ? scapegoat : imp } });
+    if (imp === "a") {
+      // Quem comanda é o infiltrado: desiste pelo próprio celular.
+      s = act(s, "a", { type: "game", action: { type: "skip-guess" } });
+    } else {
+      s = act(s, imp, { type: "leave" });
+    }
+    expect(inf(s).phase).toBe("reveal");
+    expect(inf(s).result?.guessRight).toBe(false);
+  });
 });
 
 describe("Quiz Relâmpago em sala", () => {

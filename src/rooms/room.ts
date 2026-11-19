@@ -10,6 +10,8 @@ import type { InfiltradoChallenge, LimiteChallenge, MentiraChallenge, NotaChalle
 import { assertRule, PIECE_KINDS, type PieceKind, type Player, type Rng } from "@/engine/core";
 import {
   createInfiltrado,
+  INFILTRADO_MODES,
+  modeOf,
   DEFAULT_INFILTRADO_CONFIG,
   INFILTRADO_MIN,
   reduceInfiltrado,
@@ -72,7 +74,15 @@ export type NotaRoomAction =
   | { type: "show-score" }
   | { type: "next" };
 
-export type InfiltradoRoomAction = { type: "seen" } | { type: "next-hint-round" } | { type: "open-vote" } | { type: "vote"; targetId: string } | { type: "close-vote" } | { type: "next" };
+export type InfiltradoRoomAction =
+  | { type: "seen" }
+  | { type: "next-hint-round" }
+  | { type: "open-vote" }
+  | { type: "vote"; targetId: string }
+  | { type: "close-vote" }
+  | { type: "last-guess"; guess: string }
+  | { type: "skip-guess" }
+  | { type: "next" };
 
 export type QuizRoomAction = { type: "answer"; choice: number } | { type: "close" } | { type: "next" };
 export type PrefereRoomAction = { type: "choose"; choice: "a" | "b" } | { type: "swap" } | { type: "reveal" } | { type: "next" };
@@ -287,6 +297,8 @@ function infiltradoAuto(s: RoomState, m: InfiltradoState, ctx: RoomCtx): RoomSta
     const pending = next.players.filter((p) => next.votes[p.id] === undefined && !absent.has(p.id));
     if (pending.length === 0) next = reduceInfiltrado(next, { type: "close-vote", force: true }, pool, ctx.rng);
   }
+  // O infiltrado pego saiu da sala: perde o chute final e a rodada segue.
+  if (next.phase === "last-guess" && absent.has(next.impostorId)) next = reduceInfiltrado(next, { type: "skip-guess" }, pool, ctx.rng);
   return { ...s, match: { game: "infiltrado", state: next } };
 }
 
@@ -306,7 +318,14 @@ function applyInfiltrado(s: RoomState, m: InfiltradoState, actorId: string, a: I
       return infiltradoAuto(s, reduceInfiltrado(m, { type: "vote", voterId: actorId, targetId: a.targetId }, pool, ctx.rng), ctx);
     case "close-vote":
       requireHost(s, actorId);
-      return { ...s, match: { game: "infiltrado", state: reduceInfiltrado(m, { type: "close-vote", force: true }, pool, ctx.rng) } };
+      return infiltradoAuto(s, reduceInfiltrado(m, { type: "close-vote", force: true }, pool, ctx.rng), ctx);
+    case "last-guess":
+      // Só o próprio infiltrado chuta: quem chuta é quem está autenticado.
+      return infiltradoAuto(s, reduceInfiltrado(m, { type: "last-guess", playerId: actorId, guess: a.guess }, pool, ctx.rng), ctx);
+    case "skip-guess":
+      // Quem comanda pode destravar se o infiltrado sumir ou demorar demais.
+      requireHost(s, actorId);
+      return infiltradoAuto(s, reduceInfiltrado(m, { type: "skip-guess" }, pool, ctx.rng), ctx);
     case "next": {
       requireHost(s, actorId);
       const next = reduceInfiltrado(m, { type: "next" }, pool, ctx.rng);
@@ -511,6 +530,7 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
       const infiltrado = { ...s.config.infiltrado, ...a.infiltrado };
       assertRule(Number.isInteger(infiltrado.rounds) && infiltrado.rounds >= 1 && infiltrado.rounds <= 10, "rounds", "Escolha entre 1 e 10 rodadas.");
       assertRule(Number.isInteger(infiltrado.hintRounds) && infiltrado.hintRounds >= 1 && infiltrado.hintRounds <= 3, "hints", "Escolha de 1 a 3 voltas de dicas.");
+      assertRule(INFILTRADO_MODES.includes(modeOf(infiltrado)), "mode", "Modo de Infiltrado desconhecido.");
       const quiz = { ...s.config.quiz, ...a.quiz };
       assertRule(Number.isInteger(quiz.questions) && quiz.questions >= 3 && quiz.questions <= 20, "questions", "Escolha de 3 a 20 perguntas.");
       assertRule(QUIZ_SECONDS_OPTIONS.includes(quiz.seconds), "seconds", "Tempo por pergunta inválido.");

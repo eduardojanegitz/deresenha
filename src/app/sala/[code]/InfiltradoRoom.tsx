@@ -6,7 +6,8 @@ import { Piece } from "@/brand/Piece";
 import { themeLabel } from "@/content/library";
 import type { Player } from "@/engine/core";
 import type { InfiltradoView } from "@/engine/infiltrado";
-import { Reveal } from "@/games/infiltrado/InfiltradoGame";
+import { hasLastGuess } from "@/engine/infiltrado";
+import { LastGuess, MODE_INFO, Reveal, secretText, SneakyTip, WordSecret } from "@/games/infiltrado/InfiltradoGame";
 import type { RoomView } from "@/rooms/room";
 import { ErrorNote, PhaseStage, Podium, Progress, Scoreboard, useTone } from "@/ui/play";
 import { useSound } from "@/ui/sound";
@@ -26,7 +27,7 @@ export function InfiltradoRoom({ view, room }: { view: RoomView; room: Room }) {
   const reduce = useReducedMotion();
   const [showWord, setShowWord] = useState(false);
   const [choice, setChoice] = useState<string | null>(null);
-  useTone(s.phase === "reveal" || (s.phase === "distribute" && showWord) ? "noite" : null);
+  useTone(s.phase === "reveal" || s.phase === "last-guess" || (s.phase === "distribute" && showWord) ? "noite" : null);
   const game = (action: Parameters<Room["act"]>[0] extends infer A ? (A extends { type: "game"; action: infer G } ? G : never) : never, quiet = false) =>
     room.act({ type: "game", action }, { quiet });
   const waitHost = <p className="muted py-2 text-center">Esperando {hostName}.</p>;
@@ -45,17 +46,17 @@ export function InfiltradoRoom({ view, room }: { view: RoomView; room: Room }) {
           <div className="grid justify-items-center gap-4 text-center">
             <Piece kind="pino" mood="sus" size={56} alive />
             <h1 className="text-[clamp(26px,7vw,36px)]">Sua palavra</h1>
-            <p className="muted max-w-[32ch]">Só você vê. Guarde bem: você pode ser o infiltrado sem saber.</p>
+            <p className="muted max-w-[32ch]">Só você vê. {MODE_INFO[s.mode].whisper}</p>
             <button
               className="grid aspect-[5/4] w-[min(80vw,300px)] place-items-center rounded-[28px] p-5 text-center"
               style={{ background: showWord ? "var(--color-gema)" : "var(--color-noite-2)", boxShadow: showWord ? "0 6px 0 var(--color-gema-d)" : "inset 0 0 0 3px #1E5A48" }}
               onClick={() => setShowWord((v) => !v)}
               aria-pressed={showWord}
-              aria-label={showWord ? `Sua palavra é ${s.myWord}. Toque para esconder.` : "Toque para ver sua palavra"}
+              aria-label={showWord ? `${secretText(s.myWord, s.iAmImpostor, s.theme)}. Toque para esconder.` : "Toque para ver sua palavra"}
             >
               {showWord ? (
-                <motion.span initial={reduce ? false : { scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="font-display text-[clamp(32px,10vw,48px)] leading-tight font-black text-[var(--color-tinta)]">
-                  {s.myWord}
+                <motion.span initial={reduce ? false : { scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-[var(--color-tinta)]">
+                  <WordSecret word={s.myWord} impostor={s.iAmImpostor} theme={s.theme} dark />
                 </motion.span>
               ) : (
                 <span className="font-display text-lg font-extrabold text-[#7FA897]">Toque para ver</span>
@@ -93,9 +94,10 @@ export function InfiltradoRoom({ view, room }: { view: RoomView; room: Room }) {
           <Progress round={s.round} total={s.config.rounds} />
           <h1>Dicas{s.config.hintRounds > 1 ? `, volta ${s.hintRound} de ${s.config.hintRounds}` : ""}</h1>
           <p className="muted">Na ordem abaixo, cada um fala em voz alta uma palavra ou frase curta sobre a sua palavra.</p>
-          <button className="card flex items-center justify-between rounded-[18px] px-4 py-3 text-left" onClick={() => setShowWord((v) => !v)} aria-pressed={showWord}>
-            <span className="text-[15px] font-semibold text-[var(--fg-2)]">Sua palavra</span>
-            <b className="font-display text-xl font-black">{showWord ? s.myWord : "Toque para ver"}</b>
+          {hasLastGuess(s.config) && <SneakyTip />}
+          <button className="card flex items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left" onClick={() => setShowWord((v) => !v)} aria-pressed={showWord}>
+            <span className="text-[15px] font-semibold text-[var(--fg-2)]">{showWord && s.iAmImpostor ? "Você é o infiltrado" : "Sua palavra"}</span>
+            <b className="font-display text-xl font-black">{!showWord ? "Toque para ver" : s.myWord ?? "Sem palavra"}</b>
           </button>
           <ol className="grid gap-2">
             {order.map((p, i) => (
@@ -167,6 +169,21 @@ export function InfiltradoRoom({ view, room }: { view: RoomView; room: Room }) {
             </button>
           )}
         </>
+      );
+      break;
+    }
+
+    case "last-guess": {
+      const imp = P(s.impostorId!);
+      body = (
+        <LastGuess
+          impostor={imp}
+          canGuess={s.iAmImpostor}
+          pending={room.pending}
+          onGuess={(guess) => game({ type: "last-guess", guess }).then((ok) => ok && play("reveal"))}
+          onSkip={s.iAmImpostor || amHost ? () => game({ type: "skip-guess" }) : undefined}
+          canSkip={amHost}
+        />
       );
       break;
     }

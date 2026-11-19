@@ -35,6 +35,8 @@ const infiltradoAction = z.discriminatedUnion("type", [
   z.object({ type: z.literal("open-vote") }),
   z.object({ type: z.literal("vote"), targetId: z.string().uuid() }),
   z.object({ type: z.literal("close-vote") }),
+  z.object({ type: z.literal("last-guess"), guess: z.string().trim().min(1).max(60) }),
+  z.object({ type: z.literal("skip-guess") }),
 ]);
 
 const quizAction = z.discriminatedUnion("type", [z.object({ type: z.literal("answer"), choice: z.number().int().min(0).max(3) }), z.object({ type: z.literal("close") })]);
@@ -70,7 +72,7 @@ export const roomActionSchema = z.discriminatedUnion("type", [
       })
       .partial()
       .optional(),
-    infiltrado: z.object({ rounds: z.number().int().min(1).max(10), hintRounds: z.number().int().min(1).max(3) }).partial().optional(),
+    infiltrado: z.object({ rounds: z.number().int().min(1).max(10), hintRounds: z.number().int().min(1).max(3), mode: z.enum(["secreto", "sabe", "sem-palavra"]) }).partial().optional(),
     quiz: z.object({ questions: z.number().int().min(3).max(20), seconds: z.number().int(), speed: z.boolean() }).partial().optional(),
     prefere: z.object({ rounds: z.number().int().min(1).max(20), scoreMajority: z.boolean() }).partial().optional(),
     limite: z.object({ rounds: z.number().int().min(1).max(20) }).partial().optional(),

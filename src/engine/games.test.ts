@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { challengesFor } from "@/content/library";
 import { RuleError, seeded, type Player } from "./core";
 import { addChampionship, normalizeScores } from "./championship";
-import { createInfiltrado, DEFAULT_INFILTRADO_CONFIG, reduceInfiltrado, viewInfiltradoFor, wordFor, type InfiltradoState } from "./infiltrado";
+import { createInfiltrado, DEFAULT_INFILTRADO_CONFIG, reduceInfiltrado, sameWord, viewInfiltradoFor, wordFor, type InfiltradoMode, type InfiltradoState } from "./infiltrado";
 import { createMimica, currentActor, currentTeam, DEFAULT_MIMICA_CONFIG, reduceMimica } from "./mimica";
 import { createRanking, currentItem, DEFAULT_RANKING_CONFIG, reduceRanking } from "./ranking";
 
@@ -124,6 +124,80 @@ describe("Infiltrado", () => {
     expect(v.impostorId).toBeNull();
     expect(v.myWord).toBe(wordFor(s, "caio"));
     expect(JSON.stringify(v)).not.toContain(s.impostorId === "caio" ? s.pair.major : s.pair.impostor);
+  });
+
+  describe("modos em que o infiltrado sabe", () => {
+    const withMode = (mode: InfiltradoMode, rng = seeded(11)): InfiltradoState => {
+      let s = createInfiltrado({ ...DEFAULT_INFILTRADO_CONFIG, mode }, players, pool, rng);
+      players.forEach((p) => (s = reduceInfiltrado(s, { type: "seen", playerId: p.id }, pool, rng)));
+      s = reduceInfiltrado(s, { type: "start-hints" }, pool, rng);
+      return reduceInfiltrado(s, { type: "open-vote" }, pool, rng);
+    };
+    const catchIt = (s: InfiltradoState, rng = seeded(12)) => {
+      const imp = s.impostorId;
+      const scapegoat = players.find((p) => p.id !== imp)!.id;
+      players.forEach((p) => (s = reduceInfiltrado(s, { type: "vote", voterId: p.id, targetId: p.id === imp ? scapegoat : imp }, pool, rng)));
+      return reduceInfiltrado(s, { type: "close-vote" }, pool, rng);
+    };
+
+    it("só o infiltrado é avisado; no 'sem palavra' o cartão dele vem vazio", () => {
+      const sabe = withMode("sabe");
+      expect(viewInfiltradoFor(sabe, sabe.impostorId).iAmImpostor).toBe(true);
+      expect(viewInfiltradoFor(sabe, sabe.impostorId).myWord).toBe(sabe.pair.impostor);
+      players.filter((p) => p.id !== sabe.impostorId).forEach((p) => expect(viewInfiltradoFor(sabe, p.id).iAmImpostor).toBe(false));
+      const vazio = withMode("sem-palavra");
+      const mine = viewInfiltradoFor(vazio, vazio.impostorId);
+      expect(mine.myWord).toBeNull();
+      expect(JSON.stringify(mine)).not.toContain(`"${vazio.pair.major}"`);
+      expect(JSON.stringify(mine)).not.toContain(`"${vazio.pair.impostor}"`);
+      const secreto = createInfiltrado(DEFAULT_INFILTRADO_CONFIG, players, pool, seeded(13));
+      expect(viewInfiltradoFor(secreto, secreto.impostorId).iAmImpostor).toBe(false);
+    });
+
+    it("quem sabe que é o infiltrado nunca abre as dicas", () => {
+      for (let seed = 1; seed <= 30; seed++) {
+        const s = createInfiltrado({ ...DEFAULT_INFILTRADO_CONFIG, mode: "sem-palavra" }, players, pool, seeded(seed));
+        expect(s.starterId).not.toBe(s.impostorId);
+      }
+    });
+
+    it("infiltrado pego chuta a palavra: acertando, rouba a rodada", () => {
+      const rng = seeded(14);
+      let s = catchIt(withMode("sem-palavra", rng), rng);
+      expect(s.phase).toBe("last-guess");
+      expect(viewInfiltradoFor(s, "ana").impostorId).toBe(s.impostorId);
+      const other = players.find((p) => p.id !== s.impostorId)!.id;
+      expect(() => reduceInfiltrado(s, { type: "last-guess", playerId: other, guess: "x" }, pool, rng)).toThrow(/Só o infiltrado/);
+      s = reduceInfiltrado(s, { type: "last-guess", playerId: s.impostorId, guess: `  ${s.pair.major.toUpperCase()} ` }, pool, rng);
+      expect(s.phase).toBe("reveal");
+      expect(s.result?.guessRight).toBe(true);
+      expect(s.scores[s.impostorId]).toBe(3);
+      players.filter((p) => p.id !== s.impostorId).forEach((p) => expect(s.scores[p.id]).toBe(1));
+    });
+
+    it("errando o chute, a turma leva a rodada normalmente", () => {
+      const rng = seeded(15);
+      let s = catchIt(withMode("sabe", rng), rng);
+      s = reduceInfiltrado(s, { type: "last-guess", playerId: s.impostorId, guess: "palavra que não existe" }, pool, rng);
+      expect(s.result?.guessRight).toBe(false);
+      expect(s.scores[s.impostorId]).toBe(0);
+      players.filter((p) => p.id !== s.impostorId).forEach((p) => expect(s.scores[p.id]).toBe(2));
+    });
+
+    it("no modo secreto não existe chute final", () => {
+      const rng = seeded(16);
+      const s = catchIt(withMode("secreto", rng), rng);
+      expect(s.phase).toBe("reveal");
+      expect(s.result?.guess).toBeUndefined();
+    });
+
+    it("compara o chute sem ligar para acento, artigo ou plural", () => {
+      expect(sameWord("o Café ", "café")).toBe(true);
+      expect(sameWord("Pães", "pãe")).toBe(true);
+      expect(sameWord("geladeiras", "Geladeira")).toBe(true);
+      expect(sameWord("chá", "café")).toBe(false);
+      expect(sameWord("", "")).toBe(false);
+    });
   });
 });
 

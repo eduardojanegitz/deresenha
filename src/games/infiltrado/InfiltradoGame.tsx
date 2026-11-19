@@ -10,12 +10,17 @@ import type { Player } from "@/engine/core";
 import {
   createInfiltrado,
   DEFAULT_INFILTRADO_CONFIG,
+  hasLastGuess,
   INFILTRADO_MIN,
+  INFILTRADO_MODES,
+  knowsImpostor,
+  modeOf,
   pendingVoters,
   reduceInfiltrado,
   wordFor,
   type InfiltradoAction,
   type InfiltradoConfig,
+  type InfiltradoMode,
   type InfiltradoState,
 } from "@/engine/infiltrado";
 import { EndActions, MatchFrame, SetupShell, Unavailable, type NightLink } from "@/ui/frame";
@@ -49,6 +54,7 @@ export function InfiltradoGame() {
         value={themes}
         onToggle={(id) => setThemes((t) => (t.includes(id) ? (t.length === 1 ? t : t.filter((x) => x !== id)) : [...t, id]))}
       />
+      <ModePicker value={modeOf(config)} onChange={(mode) => setConfig((c) => ({ ...c, mode }))} />
       <Stepper label="Rodadas" value={config.rounds} min={1} max={10} onChange={(rounds) => setConfig((c) => ({ ...c, rounds }))} />
       <Stepper label="Voltas de dicas antes de votar" value={config.hintRounds} min={1} max={3} onChange={(hintRounds) => setConfig((c) => ({ ...c, hintRounds }))} />
     </SetupShell>
@@ -63,7 +69,7 @@ export function InfiltradoMatch({ config, players, pool, onRematch, onSetup, nig
   const [speaker, setSpeaker] = useState(0);
   const { play } = useSound();
   const P = (id: string) => s.players.find((p) => p.id === id) as Player;
-  useTone((privateOpen && (s.phase === "distribute" || s.phase === "vote")) || s.phase === "reveal" ? "noite" : null);
+  useTone((privateOpen && (s.phase === "distribute" || s.phase === "vote")) || s.phase === "reveal" || s.phase === "last-guess" ? "noite" : null);
 
   // Cada troca de pessoa no "passa o celular" zera o estado local.
   const nextToSee = s.players.find((p) => !s.seen.includes(p.id)) ?? null;
@@ -94,10 +100,10 @@ export function InfiltradoMatch({ config, players, pool, onRematch, onSetup, nig
         <div className="grid justify-items-center gap-[18px] text-center">
           <Piece kind="pino" mood="sus" size={56} alive />
           <h1 className="text-[clamp(28px,7vw,38px)]">{nextToSee.name}, esta é sua palavra</h1>
-          <p className="muted max-w-[32ch]">Guarde bem. Você pode ser o infiltrado sem saber.</p>
+          <p className="muted max-w-[32ch]">{MODE_INFO[modeOf(s.config)].whisper}</p>
           <HoldToReveal
-            secret={<span className="font-display text-[clamp(30px,9vw,44px)] leading-tight font-black text-balance">{wordFor(s, nextToSee.id)}</span>}
-            srText={`Sua palavra é ${wordFor(s, nextToSee.id)}`}
+            secret={<WordSecret word={wordFor(s, nextToSee.id)} impostor={knowsImpostor(s, nextToSee.id)} theme={s.pair.theme} />}
+            srText={secretText(wordFor(s, nextToSee.id), knowsImpostor(s, nextToSee.id), s.pair.theme)}
             onPeek={() => setPeeked(true)}
           />
           <div className="w-full max-w-[420px]">
@@ -128,6 +134,7 @@ export function InfiltradoMatch({ config, players, pool, onRematch, onSetup, nig
         <Progress round={s.round} total={s.config.rounds} />
         <h1>Dicas{s.config.hintRounds > 1 ? `, volta ${s.hintRound} de ${s.config.hintRounds}` : ""}</h1>
         <p className="muted">Cada um, na ordem, fala uma palavra ou frase curta sobre a sua palavra. Toque em quem acabou de falar para passar a vez.</p>
+        {hasLastGuess(s.config) && <SneakyTip />}
         <ol className="grid gap-2">
           {order.map((p, i) => (
             <li key={p.id}>
@@ -216,6 +223,9 @@ export function InfiltradoMatch({ config, players, pool, onRematch, onSetup, nig
         </div>
       );
     }
+  } else if (s.phase === "last-guess") {
+    const imp = P(s.impostorId);
+    body = <LastGuess impostor={imp} canGuess onGuess={(guess) => dispatch({ type: "last-guess", playerId: imp.id, guess }) && play("reveal")} onSkip={() => dispatch({ type: "skip-guess" }) && play("reveal")} />;
   } else if (s.phase === "reveal" && s.result) {
     body = <Reveal s={s} P={P} onNext={() => dispatch({ type: "next" }) && play(s.round >= s.config.rounds ? "win" : "tap")} />;
   } else if (s.phase === "end") {
@@ -251,7 +261,7 @@ export function Reveal({ s, P, onNext, canAdvance = true }: { s: Pick<Infiltrado
     const t1 = window.setTimeout(() => setStep(1), 900);
     const t2 = window.setTimeout(() => {
       setStep(2);
-      play(r.caught ? "hit" : "miss");
+      play(r.caught && !r.guessRight ? "hit" : "miss");
     }, 2300);
     const t3 = window.setTimeout(() => setStep(3), 3000);
     return () => [t1, t2, t3].forEach(window.clearTimeout);
@@ -270,18 +280,25 @@ export function Reveal({ s, P, onNext, canAdvance = true }: { s: Pick<Infiltrado
             </motion.div>
           </div>
           <div className="absolute inset-0 grid content-center justify-items-center gap-2 rounded-[28px] bg-[var(--color-lilas)] text-[var(--color-tinta)] shadow-[0_6px_0_var(--color-lilas-d)] [backface-visibility:hidden]" style={{ transform: "rotateY(180deg)" }}>
-            <Piece kind={imp.piece} mood={r.caught ? "sad" : "happy"} size={80} />
+            <Piece kind={imp.piece} mood={r.caught && !r.guessRight ? "sad" : "happy"} size={80} />
             <span className="text-sm font-bold">O infiltrado era</span>
             <b className="font-display text-[28px] leading-none font-black">{imp.name}</b>
           </div>
         </motion.div>
       </div>
       <p className="sr-only" aria-live="polite">
-        {step >= 2 ? `O infiltrado era ${imp.name}. ${r.caught ? "A turma acertou." : "O infiltrado escapou."}` : ""}
+        {step >= 2 ? `O infiltrado era ${imp.name}. ${r.guessRight ? "Foi pego, mas acertou a palavra e roubou a rodada." : r.caught ? "A turma acertou." : "O infiltrado escapou."}` : ""}
       </p>
 
       <motion.div className="grid w-full max-w-[520px] gap-4" initial={{ opacity: 0, y: 10 }} animate={step >= 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}>
-        <p className="font-display text-[clamp(24px,6vw,30px)] leading-tight font-black">{r.caught ? "Pegaram o infiltrado!" : `${imp.name} escapou!`}</p>
+        <p className="font-display text-[clamp(24px,6vw,30px)] leading-tight font-black">{r.guessRight ? `Pegaram, mas ${imp.name} roubou a rodada!` : r.caught ? "Pegaram o infiltrado!" : `${imp.name} escapou!`}</p>
+        {r.guess !== undefined && (
+          <div className={`rounded-[20px] px-4 py-3.5 text-left ${r.guessRight ? "bg-[var(--color-gema)] text-[var(--color-tinta)]" : "bg-[var(--card)]"}`}>
+            <div className={`text-[13.5px] font-semibold ${r.guessRight ? "" : "text-[var(--fg-2)]"}`}>Chute final de {imp.name}</div>
+            <div className="font-display mt-1 text-2xl font-black">{r.guess ? `“${r.guess}”` : "Desistiu de chutar"}</div>
+            <div className="mt-1 text-[15px] font-semibold">{r.guessRight ? "Acertou na mosca!" : r.guess ? "Errou. A turma garante a rodada." : "A turma garante a rodada."}</div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2.5 text-left">
           <div className="rounded-[20px] bg-[var(--card)] px-4 py-3.5">
             <div className="text-[13.5px] font-semibold text-[var(--fg-2)]">A maioria tinha</div>
@@ -289,7 +306,7 @@ export function Reveal({ s, P, onNext, canAdvance = true }: { s: Pick<Infiltrado
           </div>
           <div className="rounded-[20px] bg-[var(--card)] px-4 py-3.5">
             <div className="text-[13.5px] font-semibold text-[var(--fg-2)]">O infiltrado tinha</div>
-            <div className="font-display mt-1 text-2xl font-black text-[var(--color-lilas)]">{r.impostor}</div>
+            <div className="font-display mt-1 text-2xl font-black text-[var(--color-lilas)]">{r.impostor || "Nada!"}</div>
           </div>
         </div>
         <ul className="grid gap-2 text-left" aria-label="Votos">
@@ -323,6 +340,127 @@ export function Reveal({ s, P, onNext, canAdvance = true }: { s: Pick<Infiltrado
           <p className="muted py-2">Esperando quem comanda a sala avançar.</p>
         )}
       </motion.div>
+    </div>
+  );
+}
+
+/** Texto de cada modo: nome, explicação na escolha e o aviso que todo mundo vê antes de olhar a palavra. */
+export const MODE_INFO: Record<InfiltradoMode, { label: string; detail: string; whisper: string }> = {
+  secreto: {
+    label: "Infiltrado secreto",
+    detail: "Ele recebe uma palavra parecida e nem sabe que é o infiltrado. Ninguém tem certeza de nada.",
+    whisper: "Guarde bem. Você pode ser o infiltrado sem saber.",
+  },
+  sabe: {
+    label: "Infiltrado sabe",
+    detail: "Ele é avisado e recebe uma palavra parecida para disfarçar. Se for pego, ainda pode chutar a palavra da turma.",
+    whisper: "Guarde bem. Se você for o infiltrado, vai saber agora.",
+  },
+  "sem-palavra": {
+    label: "Sem palavra",
+    detail: "O cartão dele vem vazio, só com o tema. Tem que blefar nas dicas e, se for pego, chuta a palavra.",
+    whisper: "Guarde bem. Quem receber o cartão vazio é o infiltrado.",
+  },
+};
+
+export function ModePicker({ value, onChange }: { value: InfiltradoMode; onChange: (m: InfiltradoMode) => void }) {
+  return (
+    <fieldset className="grid gap-2">
+      <legend className="mb-2 text-[15px] font-bold">Modo</legend>
+      <div className="grid gap-2" role="radiogroup" aria-label="Modo do Infiltrado">
+        {INFILTRADO_MODES.map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={value === m}
+            onClick={() => onChange(m)}
+            className={`grid gap-0.5 rounded-[20px] border-[2.5px] bg-[var(--card)] px-4 py-3 text-left ${value === m ? "border-[var(--color-gema)] shadow-[inset_0_0_0_1.5px_var(--color-gema)]" : "border-[var(--line)]"}`}
+          >
+            <b className="font-display text-lg font-extrabold">{MODE_INFO[m].label}</b>
+            <span className="text-[14.5px] text-[var(--fg-2)]">{MODE_INFO[m].detail}</span>
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+export const secretText = (word: string | null, impostor: boolean, theme: string) =>
+  word === null ? `Você está sem palavra: você é o infiltrado. O tema é ${themeLabel(theme)}.` : impostor ? `Você é o infiltrado. Sua palavra para disfarçar é ${word}.` : `Sua palavra é ${word}`;
+
+/** O que aparece quando a pessoa revela o cartão. */
+export function WordSecret({ word, impostor, theme, dark = false }: { word: string | null; impostor: boolean; theme: string; dark?: boolean }) {
+  const big = "font-display text-[clamp(30px,9vw,44px)] leading-tight font-black text-balance";
+  if (!impostor) return <span className={big}>{word}</span>;
+  return (
+    <span className="grid justify-items-center gap-1.5">
+      <span className={`rounded-full px-3 py-1 text-[13px] font-extrabold ${dark ? "bg-[var(--color-tinta)] text-[var(--color-gema)]" : "bg-[var(--color-lilas)] text-[var(--color-tinta)]"}`}>Você é o infiltrado</span>
+      {word === null ? (
+        <>
+          <span className={big}>Sem palavra</span>
+          <span className="text-[15px] font-semibold">Tema: {themeLabel(theme)}. Blefe!</span>
+        </>
+      ) : (
+        <>
+          <span className="text-[14px] font-semibold">Disfarce com</span>
+          <span className={big}>{word}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
+export function SneakyTip() {
+  return (
+    <p className="rounded-[18px] border-2 border-dashed border-[var(--line)] px-4 py-3 text-[15px]">
+      O infiltrado sabe quem é e está de ouvido ligado. Dica fácil demais entrega a palavra para ele chutar no final.
+    </p>
+  );
+}
+
+/**
+ * O infiltrado foi pego, mas ainda pode roubar a rodada acertando a palavra da turma.
+ * `canGuess` é falso no celular de quem não é o infiltrado (Modo Sala).
+ */
+export function LastGuess({ impostor, canGuess, onGuess, onSkip, canSkip = true, pending = false }: { impostor: Player; canGuess: boolean; onGuess: (g: string) => void; onSkip?: () => void; canSkip?: boolean; pending?: boolean }) {
+  const [guess, setGuess] = useState("");
+  return (
+    <div className="grid justify-items-center gap-4 text-center">
+      <Piece kind={impostor.piece} mood="sus" size={88} alive />
+      <h1 className="text-[clamp(26px,7vw,36px)]">Pegaram {impostor.name}!</h1>
+      <p className="muted max-w-[34ch]">Mas ainda não acabou. Se {impostor.name} acertar a palavra da turma, rouba a rodada.</p>
+      {canGuess ? (
+        <form
+          className="grid w-full max-w-[420px] gap-2.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (guess.trim()) onGuess(guess.trim());
+          }}
+        >
+          <label className="grid gap-1.5 text-left">
+            <span className="text-[15px] font-bold">{impostor.name}, qual é a palavra da turma?</span>
+            <input className="input" value={guess} onChange={(e) => setGuess(e.target.value)} maxLength={60} autoComplete="off" autoCapitalize="off" size={1} placeholder="Seu chute" autoFocus />
+          </label>
+          <button className="btn btn-gema" disabled={!guess.trim() || pending}>
+            Chutar
+          </button>
+          {onSkip && (
+            <button type="button" className="py-2 text-[15px] font-semibold text-[var(--fg-2)] underline underline-offset-4" onClick={onSkip}>
+              Não faço ideia. Desistir
+            </button>
+          )}
+        </form>
+      ) : (
+        <>
+          <p className="font-display text-xl font-extrabold">Ninguém fala nada. {impostor.name} está pensando…</p>
+          {onSkip && canSkip && (
+            <button className="btn btn-ghost" onClick={onSkip}>
+              Pular o chute de {impostor.name}
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

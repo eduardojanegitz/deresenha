@@ -1,18 +1,32 @@
 import type { InfiltradoChallenge } from "@/content/types";
 import { assertRule, drawFresh, randInt, type Player, type Rng, zeroScores } from "./core";
 
+/**
+ * Como o infiltrado joga:
+ *  - "secreto": recebe uma palavra parecida e não sabe que é o infiltrado (o clássico);
+ *  - "sabe": é avisado que é o infiltrado e recebe uma palavra parecida para disfarçar;
+ *  - "sem-palavra": o cartão vem vazio, só com o tema. Ele percebe que é o infiltrado.
+ */
+export type InfiltradoMode = "secreto" | "sabe" | "sem-palavra";
+export const INFILTRADO_MODES: InfiltradoMode[] = ["secreto", "sabe", "sem-palavra"];
+
 export interface InfiltradoConfig {
   rounds: number;
   /** Rodadas de dicas antes da votação. */
   hintRounds: number;
+  /** Ausente em partidas e salas antigas: vale "secreto". */
+  mode?: InfiltradoMode;
 }
-export const DEFAULT_INFILTRADO_CONFIG: InfiltradoConfig = { rounds: 3, hintRounds: 1 };
+export const DEFAULT_INFILTRADO_CONFIG: InfiltradoConfig = { rounds: 3, hintRounds: 1, mode: "secreto" };
+export const modeOf = (c: Pick<InfiltradoConfig, "mode">): InfiltradoMode => c.mode ?? "secreto";
+/** Nos modos em que sabe quem é, o infiltrado pego ainda pode chutar a palavra da turma. */
+export const hasLastGuess = (c: Pick<InfiltradoConfig, "mode">) => modeOf(c) !== "secreto";
 export const INFILTRADO_MIN = 4;
 
 /** Pontos: civis que acertam o voto, civis quando pegam o infiltrado, infiltrado que escapa. */
-export const INFILTRADO_POINTS = { rightVote: 1, caughtTeam: 1, escaped: 3 } as const;
+export const INFILTRADO_POINTS = { rightVote: 1, caughtTeam: 1, escaped: 3, stole: 3 } as const;
 
-export type InfiltradoPhase = "distribute" | "hints" | "vote" | "reveal" | "end";
+export type InfiltradoPhase = "distribute" | "hints" | "vote" | "last-guess" | "reveal" | "end";
 
 export interface InfiltradoResult {
   impostorId: string;
@@ -23,6 +37,10 @@ export interface InfiltradoResult {
   caught: boolean;
   wentToRevote: boolean;
   points: Record<string, number>;
+  mode?: InfiltradoMode;
+  /** Chute final do infiltrado pego (só nos modos em que ele sabe). */
+  guess?: string | null;
+  guessRight?: boolean;
 }
 
 export interface InfiltradoState {
@@ -53,22 +71,47 @@ export type InfiltradoAction =
   | { type: "open-vote" }
   | { type: "vote"; voterId: string; targetId: string }
   | { type: "close-vote"; force?: boolean }
+  | { type: "last-guess"; playerId: string; guess: string }
+  | { type: "skip-guess" }
   | { type: "next" };
 
-/** Palavra que cada pessoa recebe. O infiltrado não sabe que é o infiltrado. */
-export const wordFor = (s: Pick<InfiltradoState, "pair" | "impostorId">, playerId: string) =>
-  playerId === s.impostorId ? s.pair.impostor : s.pair.major;
+type Who = Pick<InfiltradoState, "pair" | "impostorId" | "config">;
+
+/** Palavra que cada pessoa recebe. No modo "sem-palavra", o infiltrado recebe null. */
+export const wordFor = (s: Who, playerId: string): string | null =>
+  playerId !== s.impostorId ? s.pair.major : modeOf(s.config) === "sem-palavra" ? null : s.pair.impostor;
+
+/** Se esta pessoa sabe que é o infiltrado (nunca no modo "secreto"). */
+export const knowsImpostor = (s: Who, playerId: string) => playerId === s.impostorId && modeOf(s.config) !== "secreto";
+
+/** Compara o chute com a palavra sem ligar para acento, maiúscula, artigo ou plural. */
+export function sameWord(a: string, b: string): boolean {
+  const norm = (x: string) =>
+    x
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9 ]/g, " ")
+      .replace(/^\s*(o|a|os|as|um|uma|uns|umas)\s+/, "")
+      .replace(/\s+/g, "")
+      .replace(/s$/, "");
+  const x = norm(a);
+  return x.length > 0 && x === norm(b);
+}
 
 function begin(s: InfiltradoState, pool: readonly InfiltradoChallenge[], rng: Rng): InfiltradoState {
   const d = drawFresh(rng, pool, s.used, s.pair?.id);
+  const impostorId = (s.players[randInt(rng, 0, s.players.length - 1)] as Player).id;
+  // Quando o infiltrado sabe quem é, ele nunca abre as dicas: começar sem pista nenhuma seria injusto.
+  const starters = hasLastGuess(s.config) ? s.players.filter((p) => p.id !== impostorId) : s.players;
   return {
     ...s,
     round: s.round + 1,
     phase: "distribute",
     pair: d.item,
     used: d.used,
-    impostorId: (s.players[randInt(rng, 0, s.players.length - 1)] as Player).id,
-    starterId: (s.players[randInt(rng, 0, s.players.length - 1)] as Player).id,
+    impostorId,
+    starterId: (starters[randInt(rng, 0, starters.length - 1)] as Player).id,
     seen: [],
     hintRound: 1,
     votes: {},
@@ -110,10 +153,17 @@ export function tally(votes: Record<string, string>): Record<string, number> {
 
 export const pendingVoters = (s: InfiltradoState) => s.players.filter((p) => s.votes[p.id] === undefined).map((p) => p.id);
 
-function settle(s: InfiltradoState, accusedId: string | null): InfiltradoState {
+function settle(s: InfiltradoState, accusedId: string | null, guess: string | null = null): InfiltradoState {
   const caught = accusedId === s.impostorId;
+  const guessRight = caught && guess !== null && sameWord(guess, s.pair.major);
   const points = zeroScores(s.players.map((p) => p.id));
-  if (caught) {
+  if (guessRight) {
+    // Pego, mas acertou a palavra: rouba a rodada. Quem votou certo ainda leva o ponto do voto.
+    points[s.impostorId] = INFILTRADO_POINTS.stole;
+    s.players.forEach((p) => {
+      if (p.id !== s.impostorId && s.votes[p.id] === s.impostorId) points[p.id] = INFILTRADO_POINTS.rightVote;
+    });
+  } else if (caught) {
     s.players.forEach((p) => {
       if (p.id === s.impostorId) return;
       points[p.id] = INFILTRADO_POINTS.caughtTeam + (s.votes[p.id] === s.impostorId ? INFILTRADO_POINTS.rightVote : 0);
@@ -127,7 +177,18 @@ function settle(s: InfiltradoState, accusedId: string | null): InfiltradoState {
     ...s,
     phase: "reveal",
     scores,
-    result: { impostorId: s.impostorId, major: s.pair.major, impostor: s.pair.impostor, tally: tally(s.votes), accusedId, caught, wentToRevote: s.wentToRevote, points },
+    result: {
+      impostorId: s.impostorId,
+      major: s.pair.major,
+      impostor: modeOf(s.config) === "sem-palavra" ? "" : s.pair.impostor,
+      tally: tally(s.votes),
+      accusedId,
+      caught,
+      wentToRevote: s.wentToRevote,
+      points,
+      mode: modeOf(s.config),
+      ...(hasLastGuess(s.config) && caught ? { guess, guessRight } : {}),
+    },
   };
 }
 
@@ -163,11 +224,24 @@ export function reduceInfiltrado(s: InfiltradoState, a: InfiltradoAction, pool: 
       const t = tally(s.votes);
       const max = Math.max(...Object.values(t));
       const top = Object.keys(t).filter((id) => t[id] === max);
-      if (top.length === 1) return settle(s, top[0] as string);
+      if (top.length === 1) {
+        // Pegaram o infiltrado que sabia quem era: antes da revelação, ele ainda tem um chute.
+        if (top[0] === s.impostorId && hasLastGuess(s.config)) return { ...s, phase: "last-guess" };
+        return settle(s, top[0] as string);
+      }
       // Empate: uma segunda votação só entre os empatados. Se empatar de novo, o infiltrado escapa.
       if (!s.wentToRevote) return { ...s, votes: {}, candidates: top, wentToRevote: true };
       return settle(s, null);
     }
+    case "last-guess":
+      assertRule(s.phase === "last-guess", "phase", "Não é hora do chute final.");
+      assertRule(a.playerId === s.impostorId, "forbidden", "Só o infiltrado pode chutar a palavra.");
+      assertRule(a.guess.trim().length > 0, "empty", "Escreva um chute.");
+      assertRule(a.guess.length <= 60, "long", "Chute grande demais.");
+      return settle(s, s.impostorId, a.guess.trim());
+    case "skip-guess":
+      assertRule(s.phase === "last-guess", "phase", "Não é hora do chute final.");
+      return settle(s, s.impostorId, null);
     case "next":
       assertRule(s.phase === "reveal", "phase", "Termine a rodada antes de avançar.");
       if (s.round >= s.config.rounds) return { ...s, phase: "end" };
@@ -187,7 +261,10 @@ export function viewInfiltradoFor(s: InfiltradoState, viewerId: string) {
     round: s.round,
     config: s.config,
     players: s.players,
+    mode: modeOf(s.config),
     myWord: wordFor(s, viewerId),
+    /** Só a própria pessoa fica sabendo, e só nos modos em que o infiltrado sabe. */
+    iAmImpostor: knowsImpostor(s, viewerId),
     theme: s.pair.theme,
     starterId: s.starterId,
     hintRound: s.hintRound,
@@ -196,7 +273,8 @@ export function viewInfiltradoFor(s: InfiltradoState, viewerId: string) {
     myVote: s.votes[viewerId] ?? null,
     candidates: s.candidates,
     wentToRevote: s.wentToRevote,
-    impostorId: revealed ? s.impostorId : null,
+    // No chute final todo mundo já sabe quem foi pego.
+    impostorId: revealed || s.phase === "last-guess" ? s.impostorId : null,
     votes: revealed ? s.votes : {},
     scores: s.scores,
     result: revealed ? s.result : null,
