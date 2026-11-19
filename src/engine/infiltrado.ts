@@ -62,6 +62,8 @@ export interface InfiltradoState {
   scores: Record<string, number>;
   result: InfiltradoResult | null;
   used: string[];
+  /** Quem foi infiltrado nas últimas rodadas (inclui partidas anteriores), do mais antigo ao mais novo. */
+  recentImpostors?: string[];
 }
 
 export type InfiltradoAction =
@@ -99,9 +101,30 @@ export function sameWord(a: string, b: string): boolean {
   return x.length > 0 && x === norm(b);
 }
 
+/**
+ * Sorteia o infiltrado sem deixar a mesma pessoa cair toda hora, mas sem virar fila previsível:
+ * quem já foi infiltrado há pouco tem chance bem menor, e quem foi na última rodada, menor ainda.
+ * Ninguém fica com chance zero, então ainda dá para repetir de vez em quando.
+ */
+export function pickImpostor(players: readonly Player[], recent: readonly string[], rng: Rng): string {
+  const lately = recent.slice(-players.length * 2);
+  const last = recent[recent.length - 1];
+  const weights = players.map((p) => {
+    const times = lately.filter((id) => id === p.id).length;
+    return (1 / (1 + times) ** 2) * (p.id === last ? 0.25 : 1);
+  });
+  let roll = rng() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < players.length; i++) {
+    roll -= weights[i] as number;
+    if (roll < 0) return (players[i] as Player).id;
+  }
+  return (players[players.length - 1] as Player).id;
+}
+
 function begin(s: InfiltradoState, pool: readonly InfiltradoChallenge[], rng: Rng): InfiltradoState {
   const d = drawFresh(rng, pool, s.used, s.pair?.id);
-  const impostorId = (s.players[randInt(rng, 0, s.players.length - 1)] as Player).id;
+  const recent = s.recentImpostors ?? [];
+  const impostorId = pickImpostor(s.players, recent, rng);
   // Quando o infiltrado sabe quem é, ele nunca abre as dicas: começar sem pista nenhuma seria injusto.
   const starters = hasLastGuess(s.config) ? s.players.filter((p) => p.id !== impostorId) : s.players;
   return {
@@ -111,6 +134,7 @@ function begin(s: InfiltradoState, pool: readonly InfiltradoChallenge[], rng: Rn
     pair: d.item,
     used: d.used,
     impostorId,
+    recentImpostors: [...recent, impostorId].slice(-24),
     starterId: (starters[randInt(rng, 0, starters.length - 1)] as Player).id,
     seen: [],
     hintRound: 1,
@@ -121,7 +145,8 @@ function begin(s: InfiltradoState, pool: readonly InfiltradoChallenge[], rng: Rn
   };
 }
 
-export function createInfiltrado(config: InfiltradoConfig, players: Player[], pool: readonly InfiltradoChallenge[], rng: Rng): InfiltradoState {
+/** `recent`: quem foi infiltrado em partidas anteriores com a mesma turma, para equilibrar o sorteio. */
+export function createInfiltrado(config: InfiltradoConfig, players: Player[], pool: readonly InfiltradoChallenge[], rng: Rng, recent: readonly string[] = []): InfiltradoState {
   assertRule(players.length >= INFILTRADO_MIN, "players", `Infiltrado precisa de pelo menos ${INFILTRADO_MIN} pessoas.`);
   assertRule(players.length <= 12, "players", "O limite é de 12 pessoas por partida.");
   const s = {
@@ -141,6 +166,7 @@ export function createInfiltrado(config: InfiltradoConfig, players: Player[], po
     scores: zeroScores(players.map((p) => p.id)),
     result: null,
     used: [],
+    recentImpostors: recent.filter((id) => players.some((p) => p.id === id)).slice(-24),
   } satisfies InfiltradoState;
   return begin(s, pool, rng);
 }

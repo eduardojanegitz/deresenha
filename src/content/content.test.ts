@@ -23,6 +23,10 @@ describe("conteúdo embutido", () => {
         expect(new Set(c.options.map((o) => o.toLowerCase())).size, c.id).toBe(c.options.length);
       }
       if (c.game === "mentira") expect(c.text.length, c.id).toBeLessThanOrEqual(140);
+      if (c.game === "infiltrado") {
+        expect(c.major.toLowerCase(), c.id).not.toBe(c.impostor.toLowerCase());
+        expect(c.major.length <= 40 && c.impostor.length <= 40, c.id).toBe(true);
+      }
       if (c.game === "limite") {
         expect(c.question.length, c.id).toBeLessThanOrEqual(200);
         expect(c.unit.length, c.id).toBeLessThanOrEqual(30);
@@ -30,6 +34,11 @@ describe("conteúdo embutido", () => {
         expect(c.answer, c.id).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("o Infiltrado não repete o mesmo par de palavras", () => {
+    const keys = CHALLENGES.filter((c) => c.game === "infiltrado").map((c) => (c.game === "infiltrado" ? [c.major, c.impostor].map((w) => w.toLowerCase()).sort().join("|") : ""));
+    expect(keys.filter((k, i) => keys.indexOf(k) !== i)).toEqual([]);
   });
 
   it("cada tema da Nota, da Mímica, do Quem Sou Eu? e do Limite tem conteúdo suficiente para uma partida", () => {

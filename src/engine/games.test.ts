@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { challengesFor } from "@/content/library";
 import { RuleError, seeded, type Player } from "./core";
 import { addChampionship, normalizeScores } from "./championship";
-import { createInfiltrado, DEFAULT_INFILTRADO_CONFIG, reduceInfiltrado, sameWord, viewInfiltradoFor, wordFor, type InfiltradoMode, type InfiltradoState } from "./infiltrado";
+import { createInfiltrado, DEFAULT_INFILTRADO_CONFIG, pickImpostor, reduceInfiltrado, sameWord, viewInfiltradoFor, wordFor, type InfiltradoMode, type InfiltradoState } from "./infiltrado";
 import { createMimica, currentActor, currentTeam, DEFAULT_MIMICA_CONFIG, reduceMimica } from "./mimica";
 import { createRanking, currentItem, DEFAULT_RANKING_CONFIG, reduceRanking } from "./ranking";
 
@@ -124,6 +124,33 @@ describe("Infiltrado", () => {
     expect(v.impostorId).toBeNull();
     expect(v.myWord).toBe(wordFor(s, "caio"));
     expect(JSON.stringify(v)).not.toContain(s.impostorId === "caio" ? s.pair.major : s.pair.impostor);
+  });
+
+  it("sorteio do infiltrado espalha entre a turma, mas ainda pode repetir", () => {
+    const rng = seeded(21);
+    const counts: Record<string, number> = {};
+    let repeats = 0;
+    let recent: string[] = [];
+    for (let i = 0; i < 1000; i++) {
+      const id = pickImpostor(players, recent, rng);
+      if (id === recent[recent.length - 1]) repeats++;
+      counts[id] = (counts[id] ?? 0) + 1;
+      recent = [...recent, id].slice(-24);
+    }
+    // 5 pessoas, 1000 rodadas: cada uma perto de 200, sem ninguém sumir ou dominar.
+    players.forEach((p) => expect(counts[p.id]).toBeGreaterThan(150));
+    players.forEach((p) => expect(counts[p.id]).toBeLessThan(250));
+    // Repetir logo em seguida é raro (no sorteio puro seria ~20%), mas acontece.
+    expect(repeats).toBeGreaterThan(0);
+    expect(repeats).toBeLessThan(60);
+  });
+
+  it("a partida seguinte lembra quem foi infiltrado e passa adiante no fim de cada rodada", () => {
+    const rng = seeded(22);
+    let s = createInfiltrado({ ...DEFAULT_INFILTRADO_CONFIG, rounds: 4 }, players, pool, rng, ["ana", "ana", "ana", "fantasma"]);
+    expect(s.recentImpostors?.includes("fantasma")).toBe(false);
+    expect(s.recentImpostors?.at(-1)).toBe(s.impostorId);
+    expect(viewInfiltradoFor(s, "beto")).not.toHaveProperty("recentImpostors");
   });
 
   describe("modos em que o infiltrado sabe", () => {

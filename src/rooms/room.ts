@@ -62,7 +62,7 @@ export interface RoomState {
   /** Prazo da fase atual (epoch ms), controlado pelo servidor. */
   deadline: number | null;
   /** Perguntas que já saíram nas partidas desta sala, para a revanche não repetir. */
-  seen?: Partial<Record<RoomGame, string[]>>;
+  seen?: Partial<Record<RoomGame | "impostores", string[]>>;
 }
 
 export type NotaRoomAction =
@@ -406,10 +406,12 @@ function applyPrefere(s: RoomState, m: PrefereState, actorId: string, a: Prefere
 /* ---------- Jogo do Limite em sala ---------- */
 
 /** Revela sozinho quando todos os presentes já chutaram. */
-/** Guarda os ids usados na partida que acabou (só o Jogo do Limite, por enquanto). */
+/** Guarda o que a próxima partida da sala precisa lembrar: perguntas do Limite e infiltrados recentes. */
 function rememberSeen(s: RoomState): RoomState["seen"] {
-  if (s.match?.game !== "limite") return s.seen;
-  return { ...s.seen, limite: s.match.state.used.slice(-500) };
+  if (s.match?.game === "limite") return { ...s.seen, limite: s.match.state.used.slice(-500) };
+  // Infiltrado: lembra quem já foi infiltrado, para a revanche não repetir sempre as mesmas pessoas.
+  if (s.match?.game === "infiltrado") return { ...s.seen, impostores: (s.match.state.recentImpostors ?? []).slice(-24) };
+  return s.seen;
 }
 
 function limiteAuto(s: RoomState, m: LimiteState, ctx: RoomCtx): RoomState {
@@ -572,7 +574,7 @@ export function reduceRoom(raw: RoomState, actorId: string, a: RoomAction, ctx: 
         const match = createQuiz(s.config.quiz, players, ctx.pools.quiz.filter((c) => themes.includes(c.theme)), ctx.rng, ctx.now);
         return { ...s, status: "playing", match: { game: "quiz", state: match }, deadline: quizDeadline(match) };
       }
-      const match = createInfiltrado(s.config.infiltrado, players, ctx.pools.infiltrado.filter((c) => themes.includes(c.theme)), ctx.rng);
+      const match = createInfiltrado(s.config.infiltrado, players, ctx.pools.infiltrado.filter((c) => themes.includes(c.theme)), ctx.rng, s.seen?.impostores);
       return { ...s, status: "playing", match: { game: "infiltrado", state: match }, deadline: null };
     }
 

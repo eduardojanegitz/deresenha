@@ -7,6 +7,7 @@ import { themeLabel } from "@/content/library";
 import { useGameContent, useThemeIds } from "@/content/useGameContent";
 import type { InfiltradoChallenge } from "@/content/types";
 import type { Player } from "@/engine/core";
+import { loadSeen, saveSeen } from "@/history/seen";
 import {
   createInfiltrado,
   DEFAULT_INFILTRADO_CONFIG,
@@ -62,7 +63,12 @@ export function InfiltradoGame() {
 }
 
 export function InfiltradoMatch({ config, players, pool, onRematch, onSetup, night }: { config: InfiltradoConfig; players: Player[]; pool: InfiltradoChallenge[]; onRematch: () => void; onSetup: () => void; night?: NightLink }) {
-  const { state: s, dispatch, error } = useEngine<InfiltradoState, InfiltradoAction>(() => createInfiltrado(config, players, pool, Math.random), (st, a, rng) => reduceInfiltrado(st, a, pool, rng));
+  const { state: s, dispatch, error } = useEngine<InfiltradoState, InfiltradoAction>(
+    () => createInfiltrado(config, players, pool, Math.random, namesToIds(players, loadSeen("infiltrados"))),
+    (st, a, rng) => reduceInfiltrado(st, a, pool, rng),
+  );
+  // Lembra (pelo nome) quem já foi infiltrado neste aparelho, para a próxima partida equilibrar o sorteio.
+  useEffect(() => saveSeen("infiltrados", (s.recentImpostors ?? []).map((id) => s.players.find((p) => p.id === id)?.name ?? "")), [s.recentImpostors, s.players]);
   const [privateOpen, setPrivateOpen] = useState(false);
   const [peeked, setPeeked] = useState(false);
   const [choice, setChoice] = useState<string | null>(null);
@@ -464,3 +470,7 @@ export function LastGuess({ impostor, canGuess, onGuess, onSkip, canSkip = true,
     </div>
   );
 }
+
+/** Converte os nomes guardados no aparelho para os ids da partida atual (nomes que não estão jogando somem). */
+const namesToIds = (players: Player[], names: string[]) =>
+  names.map((n) => players.find((p) => p.name.toLowerCase() === n.toLowerCase())?.id).filter((id): id is string => !!id);
